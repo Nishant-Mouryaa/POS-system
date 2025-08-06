@@ -1,254 +1,246 @@
-//theme/colors.js
-// Cafe POS System - Modern Dark Theme
+// theme/colors.js
+// Cafe POS System - Bright Professional Theme
 
 export const Palette = {
-  /* Brand Colors - Modern Dark with Coffee Accents */
-  primary: '#FF6B35',        // Vibrant orange (coffee/energy)
-  primaryLight: '#FF8A5C',   // Lighter orange
-  primaryDark: '#E55A2E',    // Darker orange
-  primaryXLight: 'rgba(255, 107, 53, 0.15)',
-  primaryXXLight: 'rgba(255, 107, 53, 0.08)',
-  primaryXXXL: 'rgba(255, 107, 53, 0.03)',
+  /* Brand Colors - Professional Blue */
+  primary: '#2563EB',        // Vibrant blue (trust/professional)
+  primaryLight: '#3B82F6',   // Lighter blue
+  primaryDark: '#1D4ED8',    // Darker blue
+  primaryXLight: 'rgba(37, 99, 235, 0.15)',
+  primaryXXLight: 'rgba(37, 99, 235, 0.08)',
+  primaryXXXL: 'rgba(37, 99, 235, 0.03)',
   
-  secondary: '#4ECDC4',      // Teal/mint green (fresh/modern)
-  secondaryLight: '#6DD5CD', // Lighter teal
-  secondaryDark: '#3BA99F',  // Darker teal
-  secondaryXLight: 'rgba(78, 205, 196, 0.15)',
-  secondaryXXLight: 'rgba(78, 205, 196, 0.08)',
-  secondaryXXXL: 'rgba(78, 205, 196, 0.03)',
+  secondary: '#10B981',      // Emerald green (growth/fresh)
+  secondaryLight: '#34D399', // Lighter green
+  secondaryDark: '#059669',  // Darker green
+  secondaryXLight: 'rgba(16, 185, 129, 0.15)',
+  secondaryXXLight: 'rgba(16, 185, 129, 0.08)',
+  secondaryXXXL: 'rgba(16, 185, 129, 0.03)',
 
   /* Accent Colors */
-  accent: '#FFD93D',         // Golden yellow (warmth/premium)
-  accentLight: '#FFE066',    // Lighter yellow
-  accentDark: '#E6C335',     // Darker yellow
+  accent: '#F59E0B',         // Amber (attention/energy)
+  accentLight: '#FBBF24',    // Lighter amber
+  accentDark: '#D97706',     // Darker amber
 
-  /* Dark Theme Base */
-  background: '#0F0F0F',     // Pure dark background
-  backgroundElevated: '#1A1A1A', // Slightly elevated surfaces
-  backgroundCard: '#252525', // Card backgrounds
+  /* Light Theme Base */
+  background: '#F9FAFB',     // Light gray background
+  backgroundElevated: '#FFFFFF', // White elevated surfaces
+  backgroundCard: '#FFFFFF', // Card backgrounds
   
   /* UI Colors */
   iconLight: '#FFFFFF',
-  iconDark: '#B0B0B0',
-  surface: '#1E1E1E',        // Main surface color
-  surfaceVariant: '#2A2A2A', // Variant surface
+  iconDark: '#6B7280',
+  surface: '#FFFFFF',        // Main surface color
+  surfaceVariant: '#F3F4F6', // Variant surface
   
-  /* Status Colors - Dark Theme Optimized */
-  success: '#00E676',        // Bright green
-  warning: '#FFAB00',        // Amber
-  error: '#FF5252',          // Bright red
-  info: '#40C4FF',           // Light blue
+  /* Status Colors - High Contrast */
+  success: '#10B981',        // Emerald green
+  warning: '#F59E0B',        // Amber
+  error: '#EF4444',          // Bright red
+  info: '#3B82F6',           // Blue
   
-  /* Order Status - High Contrast */
-  brewing: '#FF6B35',        // Primary orange - brewing
-  ready: '#00E676',          // Bright green - ready
-  cancelled: '#757575',      // Gray - cancelled
-  completed: '#B39DDB',      // Light purple - completed
+  /* Order Status */
+  brewing: '#F59E0B',        // Amber - brewing
+  ready: '#10B981',          // Green - ready
+  cancelled: '#9CA3AF',      // Gray - cancelled
+  completed: '#8B5CF6',      // Purple - completed
 
-  /* Text Colors - Dark Theme */
-  text: '#FFFFFF',           // Primary text
-  textSecondary: '#B0B0B0',  // Secondary text
-  textMuted: '#757575',      // Muted text
-  textDisabled: '#424242',   // Disabled text
-  textOnPrimary: '#000000',  // Text on primary color
-  textOnSecondary: '#000000', // Text on secondary color
+  /* Text Colors */
+  text: '#111827',           // Primary text (almost black)
+  textSecondary: '#4B5563',  // Secondary text
+  textMuted: '#6B7280',      // Muted text
+  textDisabled: '#9CA3AF',   // Disabled text
+  textOnPrimary: '#FFFFFF',  // Text on primary color
+  textOnSecondary: '#FFFFFF', // Text on secondary color
   
   /* Borders & Dividers */
-  border: '#333333',         // Subtle borders
-  borderLight: '#424242',    // Light borders
-  divider: '#2A2A2A',        // Dividers
+  border: '#E5E7EB',         // Subtle borders
+  borderLight: '#D1D5DB',    // Light borders
+  divider: '#F3F4F6',        // Dividers
   
   /* Shadows & Overlays */
-  shadow: 'rgba(0, 0, 0, 0.5)',
-  shadowLight: 'rgba(0, 0, 0, 0.3)',
-  shadowDark: 'rgba(0, 0, 0, 0.8)',
-  overlay: 'rgba(0, 0, 0, 0.7)',
+  shadow: 'rgba(0, 0, 0, 0.1)',
+  shadowLight: 'rgba(0, 0, 0, 0.05)',
+  shadowDark: 'rgba(0, 0, 0, 0.2)',
+  overlay: 'rgba(0, 0, 0, 0.5)',
   
   /* Glass Effect */
-  glass: 'rgba(30, 30, 30, 0.8)',
-  glassBorder: 'rgba(255, 255, 255, 0.1)',
+  glass: 'rgba(255, 255, 255, 0.8)',
+  glassBorder: 'rgba(209, 213, 219, 0.5)',
 };
 
 export const AdminPalette = {
-  /* Primary Colors - Vibrant Orange */
-  primary:        '#FF6B35',            // Vibrant orange
-  primaryLight:   '#FF8A5C',            // Light orange
-  primaryDark:    '#E55A2E',            // Dark orange
-  primaryXLight:  'rgba(255, 107, 53, 0.15)',
-  primaryXXLight: 'rgba(255, 107, 53, 0.08)',
+  /* Primary Colors - Professional Blue */
+  primary: '#2563EB',
+  primaryLight: '#3B82F6',
+  primaryDark: '#1D4ED8',
+  primaryXLight: 'rgba(37, 99, 235, 0.15)',
+  primaryXXLight: 'rgba(37, 99, 235, 0.08)',
 
-  /* Secondary Colors - Modern Teal */
-  secondary:      '#4ECDC4',            // Teal
-  secondaryLight: '#6DD5CD',            // Light teal
-  secondaryDark:  '#3BA99F',            // Dark teal
+  /* Secondary Colors - Emerald Green */
+  secondary: '#10B981',
+  secondaryLight: '#34D399',
+  secondaryDark: '#059669',
   
-  /* Accent - Golden */
-  accent:         '#FFD93D',            // Golden yellow
-  accentLight:    '#FFE066',            // Light golden
-  accentDark:     '#E6C335',            // Dark golden
+  /* Accent - Amber */
+  accent: '#F59E0B',
+  accentLight: '#FBBF24',
+  accentDark: '#D97706',
 
-  /* Status Colors - High Visibility */
-  success:        '#00E676',            // Material green
-  warning:        '#FFAB00',            // Material amber
-  error:          '#FF5252',            // Material red
-  info:           '#40C4FF',            // Material light blue
+  /* Status Colors */
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
   
   /* Order Status Colors */
-  orderPending:   '#FFAB00',            // Amber - pending
-  orderBrewing:   '#FF6B35',            // Orange - brewing
-  orderReady:     '#00E676',            // Green - ready
-  orderServed:    '#B39DDB',            // Purple - served
-  orderCancelled: '#FF5252',            // Red - cancelled
+  orderPending: '#F59E0B',
+  orderBrewing: '#F59E0B',
+  orderReady: '#10B981',
+  orderServed: '#8B5CF6',
+  orderCancelled: '#EF4444',
 
-  /* Dark Theme Backgrounds */
-  bg:             '#0F0F0F',            // Main background
-  bgElevated:     '#1A1A1A',            // Elevated background
-  bgCard:         '#252525',            // Card background
-  bgNavigation:   '#1E1E1E',            // Navigation background
-  bgModal:        '#2A2A2A',            // Modal background
-  bgInput:        '#333333',            // Input background
-  bgButton:       '#3A3A3A',            // Button background
+  /* Light Theme Backgrounds */
+  bg: '#F9FAFB',
+  bgElevated: '#FFFFFF',
+  bgCard: '#FFFFFF',
+  bgNavigation: '#FFFFFF',
+  bgModal: '#FFFFFF',
+  bgInput: '#FFFFFF',
+  bgButton: '#F3F4F6',
   
   /* Surface Colors */
-  surface:        '#1E1E1E',            // Main surface
-  surfaceVariant: '#2A2A2A',            // Variant surface
-  surfaceContainer: '#333333',          // Container surface
-  surfaceContainerHigh: '#3A3A3A',      // High elevation
-  surfaceContainerHighest: '#424242',   // Highest elevation
+  surface: '#FFFFFF',
+  surfaceVariant: '#F3F4F6',
+  surfaceContainer: '#E5E7EB',
+  surfaceContainerHigh: '#D1D5DB',
+  surfaceContainerHighest: '#9CA3AF',
 
-  /* Text Colors - Dark Optimized */
-  text:           '#FFFFFF',            // Primary text
-  textSecondary:  '#E0E0E0',            // Secondary text
-  textMuted:      '#B0B0B0',            // Muted text
-  textDisabled:   '#757575',            // Disabled text
-  textFaded:      '#616161',            // Faded text
-  textOnPrimary:  '#000000',            // Text on primary
-  textOnSecondary: '#000000',           // Text on secondary
-  textOnSurface:  '#FFFFFF',            // Text on surface
-  textSuccess:    '#00E676',            // Success text
-  textWarning:    '#FFAB00',            // Warning text
-  textError:      '#FF5252',            // Error text
+  /* Text Colors */
+  text: '#111827',
+  textSecondary: '#4B5563',
+  textMuted: '#6B7280',
+  textDisabled: '#9CA3AF',
+  textFaded: '#9CA3AF',
+  textOnPrimary: '#FFFFFF',
+  textOnSecondary: '#FFFFFF',
+  textOnSurface: '#111827',
+  textSuccess: '#10B981',
+  textWarning: '#F59E0B',
+  textError: '#EF4444',
 
   /* Borders & Outlines */
-  border:         '#333333',            // Default border
-  borderLight:    '#424242',            // Light border
-  borderDark:     '#212121',            // Dark border
-  outline:        '#616161',            // Outline color
-  outlineVariant: '#424242',            // Outline variant
+  border: '#E5E7EB',
+  borderLight: '#D1D5DB',
+  borderDark: '#9CA3AF',
+  outline: '#D1D5DB',
+  outlineVariant: '#E5E7EB',
 
   /* Interactive States */
-  hover:          'rgba(255, 255, 255, 0.08)', // Hover overlay
-  pressed:        'rgba(255, 255, 255, 0.12)', // Pressed overlay
-  focused:        'rgba(255, 107, 53, 0.3)',   // Focus overlay
-  selected:       'rgba(255, 107, 53, 0.15)',  // Selected state
-  disabled:       'rgba(255, 255, 255, 0.12)', // Disabled overlay
+  hover: 'rgba(0, 0, 0, 0.05)',
+  pressed: 'rgba(0, 0, 0, 0.1)',
+  focused: 'rgba(37, 99, 235, 0.2)',
+  selected: 'rgba(37, 99, 235, 0.1)',
+  disabled: 'rgba(0, 0, 0, 0.05)',
 
-  /* Shadows - Enhanced for Dark */
-  shadow:         'rgba(0, 0, 0, 0.5)',
-  shadowLight:    'rgba(0, 0, 0, 0.3)',
-  shadowMedium:   'rgba(0, 0, 0, 0.6)',
-  shadowDark:     'rgba(0, 0, 0, 0.8)',
-  shadowColored:  'rgba(255, 107, 53, 0.3)',
+  /* Shadows */
+  shadow: 'rgba(0, 0, 0, 0.1)',
+  shadowLight: 'rgba(0, 0, 0, 0.05)',
+  shadowMedium: 'rgba(0, 0, 0, 0.15)',
+  shadowDark: 'rgba(0, 0, 0, 0.2)',
+  shadowColored: 'rgba(37, 99, 235, 0.2)',
 
-  /* Glass Morphism Effects */
-  glass:          'rgba(30, 30, 30, 0.8)',
-  glassBorder:    'rgba(255, 255, 255, 0.1)',
-  glassHighlight: 'rgba(255, 255, 255, 0.05)',
+  /* Glass Morphism */
+  glass: 'rgba(255, 255, 255, 0.8)',
+  glassBorder: 'rgba(209, 213, 219, 0.5)',
+  glassHighlight: 'rgba(255, 255, 255, 0.5)',
 
-  /* Data Visualization - Dark Theme */
-  chart1:         '#FF6B35',            // Orange
-  chart2:         '#4ECDC4',            // Teal
-  chart3:         '#FFD93D',            // Yellow
-  chart4:         '#00E676',            // Green
-  chart5:         '#FF5252',            // Red
-  chart6:         '#40C4FF',            // Blue
-  chart7:         '#B39DDB',            // Purple
-  chart8:         '#FFAB00',            // Amber
+  /* Data Visualization */
+  chart1: '#2563EB',        // Blue
+  chart2: '#10B981',        // Green
+  chart3: '#F59E0B',        // Amber
+  chart4: '#8B5CF6',        // Purple
+  chart5: '#EF4444',        // Red
+  chart6: '#3B82F6',        // Light blue
+  chart7: '#EC4899',        // Pink
+  chart8: '#14B8A6',        // Teal
 
   /* Payment Method Colors */
-  cashPayment:    '#00E676',            // Green
-  cardPayment:    '#40C4FF',            // Blue
-  upiPayment:     '#FFAB00',            // Amber
-  walletPayment:  '#B39DDB',            // Purple
+  cashPayment: '#10B981',   // Green
+  cardPayment: '#2563EB',   // Blue
+  upiPayment: '#8B5CF6',    // Purple
+  walletPayment: '#F59E0B', // Amber
   
   /* Table Status Colors */
-  tableEmpty:     '#424242',            // Gray
-  tableOccupied:  '#FF6B35',            // Orange
-  tableReserved:  '#4ECDC4',            // Teal
-  tableDirty:     '#FF5252',            // Red
-  tableServing:   '#FFD93D',            // Yellow
+  tableEmpty: '#E5E7EB',    // Gray
+  tableOccupied: '#F59E0B', // Amber
+  tableReserved: '#8B5CF6', // Purple
+  tableDirty: '#EF4444',    // Red
+  tableServing: '#10B981',  // Green
 
   /* Kitchen Priority Colors */
-  kitchenUrgent:  '#FF5252',            // Red - urgent
-  kitchenHigh:    '#FFAB00',            // Amber - high
-  kitchenNormal:  '#FF6B35',            // Orange - normal
-  kitchenLow:     '#4ECDC4',            // Teal - low
+  kitchenUrgent: '#EF4444', // Red
+  kitchenHigh: '#F59E0B',   // Amber
+  kitchenNormal: '#3B82F6', // Blue
+  kitchenLow: '#10B981',    // Green
 
   /* Inventory Status */
-  stockGood:      '#00E676',            // Green - good stock
-  stockMedium:    '#FFD93D',            // Yellow - medium stock
-  stockLow:       '#FFAB00',            // Amber - low stock
-  stockCritical:  '#FF5252',            // Red - critical
-  stockOut:       '#757575',            // Gray - out of stock
-  stockExpiring:  '#B39DDB',            // Purple - expiring
+  stockGood: '#10B981',
+  stockMedium: '#F59E0B',
+  stockLow: '#EF4444',
+  stockCritical: '#EF4444',
+  stockOut: '#9CA3AF',
+  stockExpiring: '#8B5CF6',
 
   /* Special States */
-  premium:        '#FFD93D',            // Golden - premium
-  discount:       '#00E676',            // Green - discount
-  loyalty:        '#B39DDB',            // Purple - loyalty
-  featured:       '#FF6B35',            // Orange - featured
-  trending:       '#4ECDC4',            // Teal - trending
-  newItem:        '#40C4FF',            // Blue - new
+  premium: '#F59E0B',
+  discount: '#10B981',
+  loyalty: '#8B5CF6',
+  featured: '#2563EB',
+  trending: '#EC4899',
+  newItem: '#3B82F6'
 };
 
-// Time-based theme variants (for different shifts)
+// Time-based theme variants
 export const ShiftThemes = {
   morning: {
-    accent: '#FFD93D',       // Golden - warm morning
-    secondary: '#4ECDC4',    // Fresh teal
-    brightness: 0.9,         // Slightly brighter
+    accent: '#F59E0B',       // Amber - morning
+    secondary: '#10B981',    // Green
+    brightness: 1.0,
   },
-  
   afternoon: {
-    accent: '#FF6B35',       // Standard orange
-    secondary: '#4ECDC4',    // Standard teal
-    brightness: 1.0,         // Normal brightness
+    accent: '#2563EB',       // Blue - afternoon
+    secondary: '#8B5CF6',    // Purple
+    brightness: 1.0,
   },
-  
   evening: {
-    accent: '#B39DDB',       // Purple - calm evening
-    secondary: '#40C4FF',    // Blue
-    brightness: 0.8,         // Dimmer for evening
+    accent: '#8B5CF6',       // Purple - evening
+    secondary: '#EC4899',    // Pink
+    brightness: 0.9,
   },
-  
   night: {
-    accent: '#757575',       // Muted gray
-    secondary: '#424242',    // Dark gray
-    brightness: 0.7,         // Dimmer for night shift
+    accent: '#3B82F6',       // Light blue - night
+    secondary: '#10B981',    // Green
+    brightness: 0.8,
   }
 };
 
-// Component-specific dark theme colors
+// Component-specific colors
 export const ComponentColors = {
-  // POS Screen
   pos: {
     background: AdminPalette.bg,
     menuCard: AdminPalette.bgCard,
     selectedItem: AdminPalette.selected,
     addButton: AdminPalette.primary,
-    cartSection: AdminPalette.bgElevated,
-    totalSection: AdminPalette.surfaceContainerHigh,
+    cartSection: AdminPalette.surfaceVariant,
+    totalSection: AdminPalette.surfaceContainer,
   },
-  
-  // Navigation
   navigation: {
     background: AdminPalette.bgNavigation,
     activeTab: AdminPalette.primary,
     inactiveTab: AdminPalette.textMuted,
     indicator: AdminPalette.primary,
   },
-  
-  // Order Cards
   orderCard: {
     background: AdminPalette.bgCard,
     border: AdminPalette.border,
@@ -256,16 +248,12 @@ export const ComponentColors = {
     urgent: AdminPalette.kitchenUrgent,
     normal: AdminPalette.kitchenNormal,
   },
-  
-  // Kitchen Display
   kitchen: {
     background: AdminPalette.bg,
     orderCard: AdminPalette.bgCard,
     urgentGlow: AdminPalette.shadowColored,
     completedOverlay: AdminPalette.success,
   },
-  
-  // Input Fields
   input: {
     background: AdminPalette.bgInput,
     border: AdminPalette.border,
@@ -273,8 +261,6 @@ export const ComponentColors = {
     placeholder: AdminPalette.textMuted,
     text: AdminPalette.text,
   },
-  
-  // Buttons
   button: {
     primary: AdminPalette.primary,
     secondary: AdminPalette.secondary,
@@ -284,8 +270,6 @@ export const ComponentColors = {
     ghost: 'transparent',
     disabled: AdminPalette.bgButton,
   },
-  
-  // Modal/Dialog
   modal: {
     background: AdminPalette.bgModal,
     overlay: AdminPalette.overlay,
@@ -294,15 +278,15 @@ export const ComponentColors = {
   }
 };
 
-// Gradient definitions for modern effects
+// Gradient definitions
 export const Gradients = {
   primary: `linear-gradient(135deg, ${AdminPalette.primary} 0%, ${AdminPalette.primaryLight} 100%)`,
   secondary: `linear-gradient(135deg, ${AdminPalette.secondary} 0%, ${AdminPalette.secondaryLight} 100%)`,
-  success: `linear-gradient(135deg, ${AdminPalette.success} 0%, #4CAF50 100%)`,
-  warning: `linear-gradient(135deg, ${AdminPalette.warning} 0%, #FFC107 100%)`,
-  error: `linear-gradient(135deg, ${AdminPalette.error} 0%, #F44336 100%)`,
-  dark: `linear-gradient(135deg, ${AdminPalette.bg} 0%, ${AdminPalette.bgElevated} 100%)`,
-  glass: `linear-gradient(135deg, ${AdminPalette.glass} 0%, rgba(42, 42, 42, 0.6) 100%)`,
+  success: `linear-gradient(135deg, ${AdminPalette.success} 0%, #34D399 100%)`,
+  warning: `linear-gradient(135deg, ${AdminPalette.warning} 0%, #FBBF24 100%)`,
+  error: `linear-gradient(135deg, ${AdminPalette.error} 0%, #F87171 100%)`,
+  light: `linear-gradient(135deg, #F9FAFB 0%, #FFFFFF 100%)`,
+  glass: `linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(243, 244, 246, 0.8) 100%)`,
 };
 
 export default {

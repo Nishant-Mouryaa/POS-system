@@ -2,7 +2,7 @@ import React from 'react';
 import { Animated, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-const HomeMenuButton = ({ onPress, menuButtonScale, colors, styles }) => (
+const POSMenuButton = ({ onPress, menuButtonScale, colors, styles }) => (
   <Animated.View style={{ transform: [{ scale: menuButtonScale }] }}>
     <TouchableOpacity 
       style={styles.menuButton}
@@ -15,4 +15,4 @@ const HomeMenuButton = ({ onPress, menuButtonScale, colors, styles }) => (
   </Animated.View>
 );
 
-export default HomeMenuButton; 
+export default POSMenuButton;

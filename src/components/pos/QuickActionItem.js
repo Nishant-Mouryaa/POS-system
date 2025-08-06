@@ -4,7 +4,7 @@ import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
-const HomeQuickActionItem = ({ icon, title, onPress, index, featureAnimations, pulseAnim, styles }) => {
+const QuickActionItem = ({ icon, title, onPress, index, featureAnimations, pulseAnim, styles }) => {
   const scaleValue = useRef(new Animated.Value(1)).current;
   const rotateValue = useRef(new Animated.Value(0)).current;
 
@@ -88,4 +88,4 @@ const HomeQuickActionItem = ({ icon, title, onPress, index, featureAnimations, p
   );
 };
 
-export default HomeQuickActionItem; 
+export default QuickActionItem;

@@ -16,7 +16,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import HomeScreen from '../screens/home/HomeScreen';
+import POSScreen from '../screens/home/POSScreen';
 import TextbooksScreen from '../screens/Textbooks/TextbooksScreen';
 import OnlineTestScreen from '../screens/Test/OnlineTestScreen';
 import AdminStack from './AdminStack';
@@ -163,7 +163,7 @@ const BottomTabNavigator = () => {
       
 
       <Tab.Navigator
-        initialRouteName="Home"
+        initialRouteName="POSScreen"
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarIcon: ({ focused, size }) => (
@@ -203,7 +203,7 @@ const BottomTabNavigator = () => {
           tabBarHideOnKeyboard: true,
         })}
       >
-        <Tab.Screen name="Home"      component={HomeScreen}      options={{ tabBarLabel: 'Home' }} />
+        <Tab.Screen name="Home"      component={POSScreen}      options={{ tabBarLabel: 'Home' }} />
         <Tab.Screen name="Textbooks" component={TextbookBoard} options={{ tabBarLabel: 'Textbooks' }} />
         <Tab.Screen name="Tests"     component={OnlineTestScreen} options={{ tabBarLabel: 'Tests' }} />
         <Tab.Screen name="MessageCenter" component={MessageCenterScreen} options={{ tabBarLabel: 'Message Center' }} />

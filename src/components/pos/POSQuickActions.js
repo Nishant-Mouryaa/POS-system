@@ -1,11 +1,11 @@
 import React from 'react';
 import { View } from 'react-native';
-import HomeQuickActionItem from './HomeQuickActionItem';
+import QuickActionItem from './QuickActionItem';
 
-const HomeQuickActions = ({ actions, featureAnimations, pulseAnim, styles }) => (
+const POSQuickActions = ({ actions, featureAnimations, pulseAnim, styles }) => (
   <View style={styles.featuresGrid}>
     {actions.map((action, idx) => (
-      <HomeQuickActionItem
+      <QuickActionItem
         key={action.title}
         icon={action.icon}
         title={action.title}
@@ -19,4 +19,4 @@ const HomeQuickActions = ({ actions, featureAnimations, pulseAnim, styles }) => 
   </View>
 );
 
-export default HomeQuickActions; 
+export default POSQuickActions;
