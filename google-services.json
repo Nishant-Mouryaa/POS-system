@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "576070468138",
+    "project_id": "pos-system-dc0ea",
+    "storage_bucket": "pos-system-dc0ea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:576070468138:android:2ec72c09b0c536843c3953",
+        "android_client_info": {
+          "package_name": "com.nishant.cafePos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChi_TOUM52yI7t5ZFa19juHNI5lpMkoh8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,110 @@
+{
+  "expo": {
+    "name": "Cafe POS Pro",
+    "slug": "CafePOSPro",
+    "version": "1.0.5",
+    "orientation": "portrait",
+    "icon": "./assets/adaptive-icon.png",
+    "userInterfaceStyle": "light",
+    "privacy": "public",
+    "description": "Comprehensive point-of-sale system for cafes with order management, inventory tracking, and sales analytics",
+    "keywords": [
+      "education",
+      "mcq",
+      "test",
+      "learning",
+      "exam",
+      "preparation"
+    ],
+    
+    "author": {
+      "name": "Iyer's Tutorials",
+      "email": "support@iyerstutorials.com"
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+
+
+
+    "android": {
+      "versionCode": 3,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#D51D0C"
+      },
+      "package": "com.IyersTutorials.IyersTutorials",
+      "permissions": [
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "READ_MEDIA_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "VIBRATE",
+        "WAKE_LOCK"
+      ],
+      "blockedPermissions": [
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "googleServicesFile": "./google-services.json",
+      "allowBackup": false,
+      "targetSdkVersion": 34,
+      "compileSdkVersion": 34
+    },
+
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+
+    "extra": {
+      "eas": {
+        "projectId": "1d7013c4-37bc-40e7-b605-94e76a7f879e"
+      },
+      "firebase": {
+        "apiKey": "AIzaSyAqnS4mg_rJY1oiVrWfILh5resPJLrepoc",
+        "authDomain": "pos-system-dc0ea.firebaseapp.com",
+        "projectId": "pos-system-dc0ea",
+        "storageBucket": "pos-system-dc0ea.firebasestorage.app",
+        "messagingSenderId": "576070468138",
+        "appId": "576070468138:web:11560f82f63635b93c3953"
+      }
+    },
+
+  
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+
+    "updates": {
+      "url": "https://u.expo.dev/1d7013c4-37bc-40e7-b605-94e76a7f879e",
+      "enabled": true,
+      "fallbackToCacheTimeout": 0
+    },
+
+"plugins": [
+  "expo-font",
+  [
+    "expo-notifications",
+    {
+      "icon": "./assets/adaptive-icon.png",
+      "color": "#D51D0C",
+      "sounds": ["./assets/notification_sound.mp3"],
+      "mode": "production"
+    }
+  ],
+  [
+    "expo-image-picker",
+    {
+      "photosPermission": "The app needs access to your photos to upload geometry question images.",
+      "cameraPermission": "Allow $(PRODUCT_NAME) to open the camera"
+    }
+  ],
+  "expo-secure-store"
+  
+]
+  }
+}
+
