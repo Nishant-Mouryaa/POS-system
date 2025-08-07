@@ -23,6 +23,7 @@ import AdminStack from './AdminStack';
 import { Palette } from '../theme/colors';
 import MenuCategoryScreen from '../screens/Textbooks/MenuCategoryScreen';
 import MessageCenterScreen from '../screens/messagecenter/MessageCenterScreen';
+import OrderManagementScreen from '../screens/Test/OrderManagementScreen';
 
 const { width } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
@@ -205,7 +206,7 @@ const BottomTabNavigator = () => {
       >
         <Tab.Screen name="Home"      component={POSScreen}      options={{ tabBarLabel: 'Home' }} />
         <Tab.Screen name="MenuCategoryScreen" component={MenuCategoryScreen} options={{ tabBarLabel: 'Menu' }} />
-        <Tab.Screen name="Tests"     component={OnlineTestScreen} options={{ tabBarLabel: 'Tests' }} />
+        <Tab.Screen name="OrderManagementScreen"     component={OrderManagementScreen} options={{ tabBarLabel: 'Orders' }} />
         <Tab.Screen name="MessageCenter" component={MessageCenterScreen} options={{ tabBarLabel: 'Message Center' }} />
         {/* If you want an Admin tab, add it conditionally but still coloured with Palette */}
         {/* {isAdmin && <Tab.Screen name="Admin" component={AdminPanel} />} */}
