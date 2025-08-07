@@ -1,23 +1,32 @@
 // components/OrderCard.js
-import React, { useState } from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { Text, Menu, Divider, IconButton } from 'react-native-paper';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import React, { useState, useRef } from 'react';
+import { Animated, TouchableOpacity, View } from 'react-native';
+import { Text, Menu, Divider } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { Palette } from '../../theme/colors';
-import OrderStatusBadge from '../OrderStatusBadge';
 
 const OrderCard = ({ order, onPress, onStatusChange }) => {
   const [visibleMenu, setVisibleMenu] = useState(false);
+  const scaleValue = useRef(new Animated.Value(1)).current;
 
-  const formatCurrency = (amount, currency = 'INR') => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
+  const handlePressIn = () => {
+    Animated.spring(scaleValue, {
+      toValue: 0.98,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleValue, {
+      toValue: 1,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
   };
 
   const handlePress = () => {
@@ -31,39 +40,34 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
     setVisibleMenu(false);
   };
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return Palette.warning;
+      case 'preparing': return Palette.accent;
+      case 'ready': return Palette.success;
+      case 'completed': return Palette.secondary;
+      case 'cancelled': return Palette.error;
+      default: return Palette.primary;
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'pending': return 'clock';
+      case 'preparing': return 'clock-outline';
+      case 'ready': return 'check-circle';
+      case 'completed': return 'checkbox-marked-circle';
+      case 'cancelled': return 'cancel';
+      default: return 'help-circle';
+    }
+  };
+
   const getOrderTypeIcon = (type) => {
     switch (type) {
       case 'dine_in': return 'table-chair';
       case 'takeaway': return 'bag-suitcase';
       case 'delivery': return 'motorbike';
       default: return 'help-circle-outline';
-    }
-  };
-
-  const getOrderTypeLabel = (type) => {
-    switch (type) {
-      case 'dine_in': return 'Dine In';
-      case 'takeaway': return 'Takeaway';
-      case 'delivery': return 'Delivery';
-      default: return 'Unknown';
-    }
-  };
-
-  const getCardStyle = () => {
-    const baseStyle = [styles.orderCard];
-    switch (order.status) {
-      case 'pending':
-        return [...baseStyle, styles.orderCardPending];
-      case 'preparing':
-        return [...baseStyle, styles.orderCardPreparing];
-      case 'ready':
-        return [...baseStyle, styles.orderCardReady];
-      case 'completed':
-        return [...baseStyle, styles.orderCardCompleted];
-      case 'cancelled':
-        return [...baseStyle, styles.orderCardCancelled];
-      default:
-        return baseStyle;
     }
   };
 
@@ -77,7 +81,6 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
           title="Start Preparing" 
           onPress={() => handleStatusChange('preparing')}
           leadingIcon="clock-start"
-          titleStyle={styles.menuItemText}
         />
       );
     }
@@ -89,7 +92,6 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
           title="Mark as Ready" 
           onPress={() => handleStatusChange('ready')}
           leadingIcon="check-circle"
-          titleStyle={styles.menuItemText}
         />
       );
     }
@@ -101,7 +103,6 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
           title="Complete Order" 
           onPress={() => handleStatusChange('completed')}
           leadingIcon="checkbox-marked-circle"
-          titleStyle={styles.menuItemText}
         />
       );
     }
@@ -113,12 +114,12 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
           title="Cancel Order" 
           onPress={() => handleStatusChange('cancelled')}
           leadingIcon="cancel"
-          titleStyle={[styles.menuItemText, { color: Palette.error }]}
+          titleStyle={{ color: Palette.error }}
         />
       );
     }
 
-    items.push(<Divider key="divider" style={styles.menuDivider} />);
+    items.push(<Divider key="divider" />);
     items.push(
       <Menu.Item 
         key="details"
@@ -128,7 +129,6 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
           onPress(order);
         }}
         leadingIcon="information"
-        titleStyle={styles.menuItemText}
       />
     );
 
@@ -136,100 +136,103 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
   };
 
   return (
-    <TouchableOpacity 
-      style={getCardStyle()}
-      onPress={handlePress}
-      activeOpacity={0.8}
-    >
-      <View style={styles.orderHeader}>
-        <View>
-          <Text style={styles.orderNumber}>#{order.orderNumber || order.id.slice(0, 8)}</Text>
-          <Text style={styles.orderTime}>
-            {order.orderFlow.formattedTime} • {formatDistanceToNow(order.orderFlow.orderedAt, { addSuffix: true })}
-          </Text>
+    <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
+      <TouchableOpacity 
+        style={[
+          styles.orderCard,
+          { borderLeftColor: getStatusColor(order.status) }
+        ]}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={0.9}
+      >
+        <View style={styles.orderHeader}>
+          <View>
+            <Text style={styles.orderNumber}>#{order.orderNumber || order.id.slice(0, 8)}</Text>
+            <Text style={styles.orderTime}>
+              {formatDistanceToNow(order.orderFlow.orderedAt, { addSuffix: true })}
+            </Text>
+          </View>
+          
+          <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(order.status)}20` }]}>
+            <MaterialCommunityIcons 
+              name={getStatusIcon(order.status)} 
+              size={16} 
+              color={getStatusColor(order.status)} 
+              style={styles.statusIcon}
+            />
+            <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
+              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+            </Text>
+          </View>
         </View>
-        <OrderStatusBadge status={order.status} />
-      </View>
 
-      <View style={styles.orderDetails}>
-        <View style={styles.orderType}>
-          <Icon 
-            name={getOrderTypeIcon(order.type)} 
-            size={20} 
-            color={Palette.textSecondary} 
-            style={styles.orderTypeIcon}
-          />
-          <Text style={styles.orderTypeText}>
-            {getOrderTypeLabel(order.type)}
-          </Text>
-          {order.dining?.tableNumber && (
-            <View style={styles.tableBadge}>
-              <Text style={styles.tableNumber}>Table {order.dining.tableNumber}</Text>
-            </View>
-          )}
-        </View>
+        <View style={styles.orderDetails}>
+          <View style={styles.orderTypeRow}>
+            <MaterialCommunityIcons 
+              name={getOrderTypeIcon(order.type)} 
+              size={18} 
+              color={Palette.textMuted} 
+            />
+            <Text style={styles.orderTypeText}>
+              {order.type === 'dine_in' ? 'Dine In' : 
+               order.type === 'takeaway' ? 'Takeaway' : 
+               order.type === 'delivery' ? 'Delivery' : 'Other'}
+            </Text>
+            
+            {order.dining?.tableNumber && (
+              <View style={styles.tableBadge}>
+                <Text style={styles.tableNumber}>Table {order.dining.tableNumber}</Text>
+              </View>
+            )}
+          </View>
 
-        <View style={styles.orderItems}>
           <Text style={styles.itemsText} numberOfLines={1}>
             {order.items.length} item{order.items.length > 1 ? 's' : ''}: {order.items.map(i => i.name).join(', ')}
           </Text>
         </View>
-      </View>
 
-      <View style={styles.orderFooter}>
-        <Text style={styles.orderTotal}>
-          {formatCurrency(order.pricing.total, order.pricing.currency)}
-        </Text>
-        
-        <Menu
-          visible={visibleMenu}
-          onDismiss={() => setVisibleMenu(false)}
-          anchor={
-            <IconButton
-              icon="dots-vertical"
-              size={20}
-              onPress={() => setVisibleMenu(true)}
-              style={styles.menuButton}
-              iconColor={Palette.textSecondary}
-            />
-          }
-          contentStyle={styles.menuContent}
-        >
-          {renderMenuItems()}
-        </Menu>
-      </View>
-    </TouchableOpacity>
+        <View style={styles.orderFooter}>
+          <Text style={styles.orderTotal}>
+            {order.pricing.total.toFixed(2)} {order.pricing.currency}
+          </Text>
+          
+          <Menu
+            visible={visibleMenu}
+            onDismiss={() => setVisibleMenu(false)}
+            anchor={
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setVisibleMenu(true);
+                }}
+                style={styles.menuButton}
+              >
+                <MaterialCommunityIcons 
+                  name="dots-vertical" 
+                  size={20} 
+                  color={Palette.textMuted} 
+                />
+              </TouchableOpacity>
+            }
+          >
+            {renderMenuItems()}
+          </Menu>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = {
   orderCard: {
     backgroundColor: Palette.surface,
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: Palette.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: Palette.primary,
-  },
-  orderCardPending: {
-    borderLeftColor: Palette.warning,
-  },
-  orderCardPreparing: {
-    borderLeftColor: Palette.accent,
-  },
-  orderCardReady: {
-    borderLeftColor: Palette.success,
-  },
-  orderCardCompleted: {
-    borderLeftColor: Palette.secondary,
-  },
-  orderCardCancelled: {
-    borderLeftColor: Palette.error,
+    elevation: 1,
   },
   orderHeader: {
     flexDirection: 'row',
@@ -243,44 +246,52 @@ const styles = StyleSheet.create({
     color: Palette.text,
   },
   orderTime: {
-    fontSize: 13,
+    fontSize: 12,
     color: Palette.textMuted,
+    marginTop: 2,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  statusIcon: {
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   orderDetails: {
     marginBottom: 12,
   },
-  orderType: {
+  orderTypeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
   },
-  orderTypeIcon: {
-    marginRight: 8,
-  },
   orderTypeText: {
-    fontSize: 14,
-    color: Palette.textSecondary,
-    fontWeight: '500',
+    fontSize: 13,
+    color: Palette.textMuted,
+    marginLeft: 8,
+    marginRight: 8,
   },
   tableBadge: {
     backgroundColor: Palette.primaryXXLight,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    marginLeft: 8,
   },
   tableNumber: {
     fontSize: 12,
     color: Palette.primary,
     fontWeight: '600',
   },
-  orderItems: {
-    flexDirection: 'row',
-  },
   itemsText: {
-    fontSize: 14,
-    color: Palette.textMuted,
-    flex: 1,
+    fontSize: 13,
+    color: Palette.textSecondary,
   },
   orderFooter: {
     flexDirection: 'row',
@@ -289,27 +300,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Palette.borderLight,
     paddingTop: 12,
+    marginTop: 4,
   },
   orderTotal: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: Palette.primary,
+    color: Palette.text,
   },
   menuButton: {
-    margin: 0,
+    padding: 4,
   },
-  menuContent: {
-    backgroundColor: Palette.surface,
-    borderRadius: 8,
-    elevation: 4,
-  },
-  menuItemText: {
-    color: Palette.text,
-    fontSize: 14,
-  },
-  menuDivider: {
-    backgroundColor: Palette.borderLight,
-  },
-});
+};
 
 export default OrderCard;

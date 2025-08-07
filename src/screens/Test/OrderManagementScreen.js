@@ -1,12 +1,14 @@
-// OrderManagementScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
-import { Text, IconButton, useTheme } from 'react-native-paper';
+import { View, StyleSheet, FlatList, RefreshControl, Animated } from 'react-native';
+import { Text, IconButton, useTheme, ActivityIndicator } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette } from '../../theme/colors';
 import { collection, query, where, onSnapshot, orderBy, getDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
 import { format } from 'date-fns';
 import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
+import { useRef } from 'react';
 
 // Components
 import OrderFilters from '../../components/OrderManagement/OrderFilters';
@@ -27,6 +29,7 @@ const OrderManagementScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentUserCafeId, setCurrentUserCafeId] = useState(null);
+  const headerScale = useRef(new Animated.Value(1)).current;
 
   // Custom hooks for filters and data management
   const {
@@ -112,17 +115,38 @@ const OrderManagementScreen = () => {
   }, [timeFilter, currentUserCafeId]);
 
   const handleRefresh = () => {
+    Haptics.selectionAsync();
     setRefreshing(true);
     // The snapshot listener will automatically update
   };
 
   const handleOrderPress = (order) => {
+    Haptics.selectionAsync();
     navigation.navigate('OrderDetail', { orderId: order.id });
   };
 
   const handleStatusChange = (orderId, newStatus) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     // In a real app, you would update the order status in Firestore here
     console.log(`Updating order ${orderId} to status ${newStatus}`);
+  };
+
+  const handleButtonPressIn = () => {
+    Animated.spring(headerScale, {
+      toValue: 0.95,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleButtonPressOut = () => {
+    Animated.spring(headerScale, {
+      toValue: 1,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
   };
 
   const renderOrderItem = ({ item }) => (
@@ -145,23 +169,37 @@ const OrderManagementScreen = () => {
   return (
     <View style={styles.container}>
       {/* Header Section */}
-      <View style={styles.header}>
+      <Animated.View style={[styles.header, { transform: [{ scale: headerScale }] }]}>
         <Text style={styles.headerTitle}>Order Management</Text>
         <View style={styles.headerActions}>
-          <IconButton 
-            icon="filter-variant" 
-            size={24} 
-            iconColor={Palette.primary}
-            onPress={() => console.log('Advanced filters')}
-          />
-          <IconButton 
-            icon="cog-outline" 
-            size={24} 
-            iconColor={Palette.textSecondary}
-            onPress={() => console.log('Settings')}
-          />
+          <Animated.View style={{ transform: [{ scale: headerScale }] }}>
+            <IconButton 
+              icon={() => <MaterialCommunityIcons name="filter-variant" size={24} color={Palette.primary} />}
+              size={32}
+              onPress={() => {
+                Haptics.selectionAsync();
+                console.log('Advanced filters');
+              }}
+              onPressIn={handleButtonPressIn}
+              onPressOut={handleButtonPressOut}
+              style={styles.headerButton}
+            />
+          </Animated.View>
+          <Animated.View style={{ transform: [{ scale: headerScale }] }}>
+            <IconButton 
+              icon={() => <MaterialCommunityIcons name="cog-outline" size={24} color={Palette.textSecondary} />}
+              size={32}
+              onPress={() => {
+                Haptics.selectionAsync();
+                console.log('Settings');
+              }}
+              onPressIn={handleButtonPressIn}
+              onPressOut={handleButtonPressOut}
+              style={styles.headerButton}
+            />
+          </Animated.View>
         </View>
-      </View>
+      </Animated.View>
 
       {/* Search and Filter Section */}
       <OrderFilters
@@ -201,6 +239,7 @@ const OrderManagementScreen = () => {
             <OrderListHeader orderCount={filteredOrders.length} />
           )
         }
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );
@@ -216,11 +255,9 @@ const makeStyles = (colors) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 34,
     paddingBottom: 8,
-    backgroundColor: Palette.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Palette.borderLight,
+    backgroundColor: Palette.surface, 
   },
   headerTitle: {
     fontSize: 22,
@@ -229,6 +266,10 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   headerActions: {
     flexDirection: 'row',
+    gap: 4,
+  },
+  headerButton: {
+    margin: 0,
   },
   loadingContainer: {
     flex: 1,
@@ -239,6 +280,7 @@ const makeStyles = (colors) => StyleSheet.create({
   loadingText: {
     marginTop: 16,
     color: Palette.text,
+    fontSize: 16,
   },
   listContent: {
     padding: 16,
