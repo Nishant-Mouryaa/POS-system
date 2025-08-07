@@ -244,7 +244,6 @@ const OrderManagementScreen = () => {
     </View>
   );
 };
-
 const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,

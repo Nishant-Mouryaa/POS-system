@@ -28,6 +28,7 @@ import MenuItemsScreen from '../screens/Textbooks/MenuItemsScreen';
 import CartScreen from '../screens/Textbooks/CartScreen';
 import ItemDetail from '../screens/Textbooks/ItemDetail';
 import OrderConfirmation from '../screens/Textbooks/OrderConfirmation';
+import OrderDetailScreen from '../screens/Test/OrderDetailScreen';
 
 
 const AuthStack = createStackNavigator();
@@ -59,6 +60,7 @@ const MainNavigator = () => (
     <AppStack.Screen name="MenuCategoryScreen" component={MenuCategoryScreen} />
     <AppStack.Screen name="MenuItems" component={MenuItemsScreen} />
     <AppStack.Screen name="Cart" component={CartScreen} />
+<AppStack.Screen name="OrderDetail" component={OrderDetailScreen} />
    
 <AppStack.Screen 
   name="ItemDetail" 
