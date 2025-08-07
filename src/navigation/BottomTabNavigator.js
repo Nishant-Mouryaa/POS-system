@@ -48,7 +48,7 @@ const TabBarIcon = ({ route, focused, color, size }) => {
   const iconName = {
     Home:       focused ? 'home'            : 'home-outline',
     MenuCategoryScreen:  focused ? 'food-fork-drink' : 'food-outline',
-    Tests:      focused ? 'clipboard-text'  : 'clipboard-text-outline',
+    OrderManagementScreen: focused ? 'clipboard-text' : 'clipboard-text-outline',
     MessageCenter: focused ? 'message-outline' : 'message-outline',
   }[route.name];
 
