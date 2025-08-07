@@ -46,7 +46,7 @@ const TabBarIcon = ({ route, focused, color, size }) => {
 
   const iconName = {
     Home:       focused ? 'home'            : 'home-outline',
-    Textbooks:  focused ? 'book-open'       : 'book-open-outline',
+    MenuCategoryScreen:  focused ? 'food-fork-drink' : 'food-outline',
     Tests:      focused ? 'clipboard-text'  : 'clipboard-text-outline',
     MessageCenter: focused ? 'message-outline' : 'message-outline',
   }[route.name];
@@ -204,7 +204,7 @@ const BottomTabNavigator = () => {
         })}
       >
         <Tab.Screen name="Home"      component={POSScreen}      options={{ tabBarLabel: 'Home' }} />
-        <Tab.Screen name="MenuCategoryScreen" component={MenuCategoryScreen} options={{ tabBarLabel: 'MenuCategoryScreen' }} />
+        <Tab.Screen name="MenuCategoryScreen" component={MenuCategoryScreen} options={{ tabBarLabel: 'Menu' }} />
         <Tab.Screen name="Tests"     component={OnlineTestScreen} options={{ tabBarLabel: 'Tests' }} />
         <Tab.Screen name="MessageCenter" component={MessageCenterScreen} options={{ tabBarLabel: 'Message Center' }} />
         {/* If you want an Admin tab, add it conditionally but still coloured with Palette */}
