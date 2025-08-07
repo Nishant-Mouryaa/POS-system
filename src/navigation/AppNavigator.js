@@ -24,6 +24,7 @@ import TextbookSubject from '../screens/Textbooks/TextbookSubject';
 import TextbooksList from '../screens/Textbooks/TextbooksListScreen';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useEffect, useState } from 'react';
+import MenuItemsScreen from '../screens/Textbooks/MenuItemsScreen';
 
 
 const AuthStack = createStackNavigator();
@@ -40,6 +41,7 @@ const AuthNavigator = () => (
 const MainNavigator = () => (
   <AppStack.Navigator screenOptions={{ headerShown: false }}>
     <AppStack.Screen name="Main" component={BottomTabNavigator} />
+
     <AppStack.Screen name="BoardSelection" component={BoardSelectionScreen} />
     <AppStack.Screen name="StandardSelection" component={StandardSelectionScreen} />
     <AppStack.Screen name="SubjectSelection" component={SubjectSelectionScreen} />
@@ -52,6 +54,7 @@ const MainNavigator = () => (
     <AppStack.Screen name="Settings" component={SettingsScreen} />
     <AppStack.Screen name="Profile" component={ProfileScreen} />
     <AppStack.Screen name="MenuCategoryScreen" component={MenuCategoryScreen} />
+    <AppStack.Screen name="MenuItems" component={MenuItemsScreen} />
     <AppStack.Screen name="TextbookClass" component={TextbookClass} />
     <AppStack.Screen name="TextbookSubject" component={TextbookSubject} />
     <AppStack.Screen name="TextbooksList" component={TextbooksList} />
