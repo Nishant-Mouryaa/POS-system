@@ -12,7 +12,7 @@ import theme from './src/theme';
 import { Palette } from './src/theme/colors';
 import { MD3LightTheme } from 'react-native-paper';
 import { NotificationDebugger } from './src/utils/notificationDebug';
-
+import { CartProvider } from './src/context/CartContext';
 // Firestore imports
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './src/config/firebase'; 
@@ -338,6 +338,7 @@ export default function App() {
   }
 
   return (
+        <CartProvider>
     <PaperProvider theme={LightTheme}>
       <ImageBackground 
         source={require('./assets/backGround-wrapper (2).png')} 
@@ -349,5 +350,6 @@ export default function App() {
         </AppProvider>
       </ImageBackground>
     </PaperProvider>
+    </CartProvider>
   );
 }

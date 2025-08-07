@@ -15,6 +15,7 @@ import { Palette } from '../../theme/colors';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import * as Haptics from 'expo-haptics';
+import { useCart } from '../../context/CartContext';
 
 const { width } = Dimensions.get('window');
 
@@ -22,8 +23,10 @@ export default function MenuItemsScreen({ navigation, route }) {
   const { categoryId, categoryName, cafeId } = route.params;
   const [loading, setLoading] = useState(true);
   const [menuItems, setMenuItems] = useState([]);
-  const [selectedItems, setSelectedItems] = useState([]);
   const fadeAnim = useState(new Animated.Value(0))[0];
+  
+  // Use the cart context
+  const { cartItems, addToCart } = useCart();
 
   // Fetch menu items for the selected category
   useEffect(() => {
@@ -52,7 +55,6 @@ export default function MenuItemsScreen({ navigation, route }) {
         console.error("Error fetching menu items:", error);
       } finally {
         setLoading(false);
-        // Fade in animation when data is loaded
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 300,
@@ -71,44 +73,35 @@ export default function MenuItemsScreen({ navigation, route }) {
       headerRight: () => (
         <View style={styles.cartIndicator}>
           <Icon name="cart" size={24} color={Palette.primary} />
-          {selectedItems.length > 0 && (
-            <Badge style={styles.badge}>{selectedItems.length}</Badge>
+          {cartItems.length > 0 && (
+            <Badge style={styles.badge}>{cartItems.length}</Badge>
           )}
         </View>
       )
     });
-  }, [categoryName, selectedItems]);
+  }, [categoryName, cartItems]);
 
   const handleItemPress = (item) => {
     Haptics.selectionAsync();
     navigation.navigate('ItemDetail', { 
       itemId: item.id,
-      onAddToCart: (customizations) => addToCart(item, customizations)
+      cafeId: cafeId
     });
   };
 
-  const addToCart = (item, customizations = {}) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setSelectedItems(prev => [...prev, {
-      ...item,
-      customizations,
-      timestamp: new Date()
-    }]);
-  };
-
   const viewCart = () => {
-    if (selectedItems.length === 0) {
+    if (cartItems.length === 0) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
-    navigation.navigate('Cart', { items: selectedItems });
+    navigation.navigate('Cart', { items: cartItems });
   };
 
   const getItemImage = (item) => {
     if (item.basicInfo?.image) {
       return { uri: item.basicInfo.image };
     }
-    return require('../../../assets/logo.png'); // Fallback image
+    return require('../../../assets/logo.png');
   };
 
   const getPrice = (item) => {
@@ -175,14 +168,14 @@ export default function MenuItemsScreen({ navigation, route }) {
           <View style={styles.cartButtonContent}>
             <Icon name="cart" size={24} color="#fff" />
             <Text style={styles.cartButtonText}>
-              {selectedItems.length > 0 ? 
-                `View Cart (${selectedItems.length})` : 
+              {cartItems.length > 0 ? 
+                `View Cart (${cartItems.length})` : 
                 'View Cart'}
             </Text>
-            {selectedItems.length > 0 && (
+            {cartItems.length > 0 && (
               <View style={styles.cartTotalBadge}>
                 <Text style={styles.cartTotalText}>
-                  {selectedItems.reduce((sum, item) => sum + (item.pricing?.basePrice || 0), 0)}
+                  {cartItems.reduce((sum, item) => sum + (item.pricing?.basePrice || 0), 0)}
                 </Text>
               </View>
             )}

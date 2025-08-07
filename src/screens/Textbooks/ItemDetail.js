@@ -24,11 +24,18 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import * as Haptics from 'expo-haptics';
 import { ActivityIndicator } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+// Import the CartContext to use the addToCart function
+import { useCart } from '../../context/CartContext';
 
 const { width } = Dimensions.get('window');
 
 export default function ItemDetailScreen({ navigation, route }) {
-  const { itemId, onAddToCart } = route.params;
+  const { addToCart } = useCart();
+  const { itemId } = route.params;
+
+
+
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   
@@ -113,10 +120,12 @@ export default function ItemDetailScreen({ navigation, route }) {
       }
     };
     
-    onAddToCart(itemWithCustomizations);
+    addToCart(itemWithCustomizations);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     navigation.goBack();
   };
+    
+
 
   const incrementQuantity = () => {
     Haptics.selectionAsync();

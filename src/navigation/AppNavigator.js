@@ -27,6 +27,7 @@ import { useEffect, useState } from 'react';
 import MenuItemsScreen from '../screens/Textbooks/MenuItemsScreen';
 import CartScreen from '../screens/Textbooks/CartScreen';
 import ItemDetail from '../screens/Textbooks/ItemDetail';
+import OrderConfirmation from '../screens/Textbooks/OrderConfirmation';
 
 
 const AuthStack = createStackNavigator();
@@ -58,10 +59,17 @@ const MainNavigator = () => (
     <AppStack.Screen name="MenuCategoryScreen" component={MenuCategoryScreen} />
     <AppStack.Screen name="MenuItems" component={MenuItemsScreen} />
     <AppStack.Screen name="Cart" component={CartScreen} />
-    <AppStack.Screen name="ItemDetail" component={ItemDetail} />
+   
+<AppStack.Screen 
+  name="ItemDetail" 
+  component={ItemDetail} 
+  options={{ /* your options */ }} 
+  initialParams={{ onAddToCart: (item) => console.log(item) }} // Default function if not provided
+/>
     <AppStack.Screen name="TextbookClass" component={TextbookClass} />
     <AppStack.Screen name="TextbookSubject" component={TextbookSubject} />
     <AppStack.Screen name="TextbooksList" component={TextbooksList} />
+    <AppStack.Screen name="OrderConfirmation" component={OrderConfirmation} />
 
     <AppStack.Screen name="Admin" component={AdminStack} />
 

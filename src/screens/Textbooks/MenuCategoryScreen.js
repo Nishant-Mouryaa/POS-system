@@ -12,7 +12,6 @@ import {
 import { Text, Button } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Palette } from '../../theme/colors';
-
 import { collection, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
