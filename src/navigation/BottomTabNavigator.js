@@ -21,7 +21,7 @@ import TextbooksScreen from '../screens/Textbooks/TextbooksScreen';
 import OnlineTestScreen from '../screens/Test/OnlineTestScreen';
 import AdminStack from './AdminStack';
 import { Palette } from '../theme/colors';
-import TextbookBoard from '../screens/Textbooks/TextbookBoard';
+import MenuCategoryScreen from '../screens/Textbooks/MenuCategoryScreen';
 import MessageCenterScreen from '../screens/messagecenter/MessageCenterScreen';
 
 const { width } = Dimensions.get('window');
@@ -204,7 +204,7 @@ const BottomTabNavigator = () => {
         })}
       >
         <Tab.Screen name="Home"      component={POSScreen}      options={{ tabBarLabel: 'Home' }} />
-        <Tab.Screen name="Textbooks" component={TextbookBoard} options={{ tabBarLabel: 'Textbooks' }} />
+        <Tab.Screen name="MenuCategoryScreen" component={MenuCategoryScreen} options={{ tabBarLabel: 'MenuCategoryScreen' }} />
         <Tab.Screen name="Tests"     component={OnlineTestScreen} options={{ tabBarLabel: 'Tests' }} />
         <Tab.Screen name="MessageCenter" component={MessageCenterScreen} options={{ tabBarLabel: 'Message Center' }} />
         {/* If you want an Admin tab, add it conditionally but still coloured with Palette */}

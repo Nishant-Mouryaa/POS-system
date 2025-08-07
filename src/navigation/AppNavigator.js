@@ -18,7 +18,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import OnlineTestScreen from '../screens/Test/OnlineTestScreen';
 import IntroScreen from '../screens/auth/IntroScreen';
-import TextbookBoard from '../screens/Textbooks/TextbookBoard';
+import MenuCategoryScreen from '../screens/Textbooks/MenuCategoryScreen';
 import TextbookClass from '../screens/Textbooks/TextbookClass';
 import TextbookSubject from '../screens/Textbooks/TextbookSubject';
 import TextbooksList from '../screens/Textbooks/TextbooksListScreen';
@@ -51,7 +51,7 @@ const MainNavigator = () => (
     <AppStack.Screen name="AboutUs" component={AboutUsScreen} />
     <AppStack.Screen name="Settings" component={SettingsScreen} />
     <AppStack.Screen name="Profile" component={ProfileScreen} />
-    <AppStack.Screen name="TextbookBoard" component={TextbookBoard} />
+    <AppStack.Screen name="MenuCategoryScreen" component={MenuCategoryScreen} />
     <AppStack.Screen name="TextbookClass" component={TextbookClass} />
     <AppStack.Screen name="TextbookSubject" component={TextbookSubject} />
     <AppStack.Screen name="TextbooksList" component={TextbooksList} />
