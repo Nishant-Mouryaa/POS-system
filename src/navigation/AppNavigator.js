@@ -10,7 +10,6 @@ import AboutUsScreen from '../screens/sidebar/AboutUsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import MenuCategoryScreen from '../screens/Menu/MenuCategoryScreen';
-
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import MenuItemsScreen from '../screens/Menu/MenuItemsScreen';
@@ -34,9 +33,6 @@ const AuthNavigator = () => (
 const MainNavigator = () => (
   <AppStack.Navigator screenOptions={{ headerShown: false }}>
     <AppStack.Screen name="Main" component={BottomTabNavigator} />
-
-
-
     <AppStack.Screen name="AboutUs" component={AboutUsScreen} />
     <AppStack.Screen name="Settings" component={SettingsScreen} />
     <AppStack.Screen name="Profile" component={ProfileScreen} />
@@ -44,6 +40,7 @@ const MainNavigator = () => (
     <AppStack.Screen name="MenuItems" component={MenuItemsScreen} />
     <AppStack.Screen name="Cart" component={CartScreen} />
 <AppStack.Screen name="OrderDetail" component={OrderDetailScreen} />
+<AppStack.Screen name="OrderConfirmation" component={OrderConfirmation} />
    
 <AppStack.Screen 
   name="ItemDetail" 
@@ -52,15 +49,11 @@ const MainNavigator = () => (
   initialParams={{ onAddToCart: (item) => console.log(item) }} // Default function if not provided
 />
    
-    <AppStack.Screen name="OrderConfirmation" component={OrderConfirmation} />
+    
 
     <AppStack.Screen name="Admin" component={AdminStack} />
 
-    <AppStack.Screen 
-      name="PdfViewer" 
-      component={PdfViewerScreen}
-      options={({ route }) => ({ title: route.params?.title || 'PDF' })}
-    />
+   
   </AppStack.Navigator>
 
   

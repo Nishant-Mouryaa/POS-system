@@ -19,7 +19,6 @@ import * as Haptics from 'expo-haptics';
 import POSScreen from '../screens/home/POSScreen';
 import { Palette } from '../theme/colors';
 import MenuCategoryScreen from '../screens/Menu/MenuCategoryScreen';
-import MessageCenterScreen from '../screens/messagecenter/MessageCenterScreen';
 import OrderManagementScreen from '../screens/Order/OrderManagementScreen';
 
 const { width } = Dimensions.get('window');
@@ -204,7 +203,7 @@ const BottomTabNavigator = () => {
         <Tab.Screen name="Home"      component={POSScreen}      options={{ tabBarLabel: 'Home' }} />
         <Tab.Screen name="MenuCategoryScreen" component={MenuCategoryScreen} options={{ tabBarLabel: 'Menu' }} />
         <Tab.Screen name="OrderManagementScreen"     component={OrderManagementScreen} options={{ tabBarLabel: 'Orders' }} />
-        <Tab.Screen name="MessageCenter" component={MessageCenterScreen} options={{ tabBarLabel: 'Message Center' }} />
+       
         {/* If you want an Admin tab, add it conditionally but still coloured with Palette */}
         {/* {isAdmin && <Tab.Screen name="Admin" component={AdminPanel} />} */}
 
