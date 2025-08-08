@@ -1,26 +1,25 @@
-import React, { useState, useRef, useCallback } from 'react';
+
+// POSScreen.js
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { 
   StyleSheet, 
   View, 
   ScrollView, 
   Animated, 
-  Easing, 
   Dimensions,
   TouchableOpacity,
   Platform,
   Alert,
 } from 'react-native';
-import { Text, useTheme, Avatar } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { getAuth, signOut } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { Palette } from '../../theme/colors';
+// Your local components:
 import Sidebar from '../../navigation/Sidebar';
-import { useFocusEffect } from '@react-navigation/native';
-import { useEffect } from 'react';
-
 import BackgroundWrapper from '../../components/BackgroundWrapper';
 import POSMenuButton from '../../components/pos/POSMenuButton';
 import POSUserHeader from '../../components/pos/POSUserHeader';
@@ -39,161 +38,235 @@ const POSScreen = ({ navigation, route }) => {
   const [isManager, setIsManager] = useState(false);
   const [userData, setUserData] = useState(null);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+
   const [recentOrders, setRecentOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [shiftData, setShiftData] = useState(null);
-  
-  // Animation refs
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const slideUpAnim = useRef(new Animated.Value(30)).current;
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  // Animations
+  const fadeAnim        = useRef(new Animated.Value(0)).current;
+  const scaleAnim       = useRef(new Animated.Value(0.9)).current;
+  const slideUpAnim     = useRef(new Animated.Value(30)).current;
   const headerSlideAnim = useRef(new Animated.Value(-100)).current;
-  const statsCardScale = useRef(new Animated.Value(0.8)).current;
-  const featureAnimations = useRef([...Array(4)].map(() => new Animated.Value(0))).current;
   const ordersSlideAnim = useRef(new Animated.Value(width)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const statsCardScale  = useRef(new Animated.Value(0.8)).current;
+  const featureAnimations = useRef([...Array(4)].map(() => new Animated.Value(0))).current;
+  const pulseAnim       = useRef(new Animated.Value(1)).current;
   const menuButtonScale = useRef(new Animated.Value(1)).current;
 
+  // Refresh data once on mount.
   useEffect(() => {
-  // Start all animations when component mounts
-  Animated.parallel([
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }),
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 5,
-      useNativeDriver: true,
-    }),
-    Animated.spring(slideUpAnim, {
-      toValue: 0,
-      friction: 5,
-      useNativeDriver: true,
-    }),
-    Animated.spring(headerSlideAnim, {
-      toValue: 0,
-      friction: 5,
-      useNativeDriver: true,
-    }),
-    Animated.spring(ordersSlideAnim, {
-      toValue: 0,
-      friction: 5,
-      useNativeDriver: true,
-    }),
-    Animated.spring(statsCardScale, {
-      toValue: 1,
-      friction: 5,
-      useNativeDriver: true,
-    }),
-  ]).start();
+    fetchAllData();
+  }, [fetchAllData]);
 
-  // Stagger the feature animations
-  Animated.stagger(100, featureAnimations.map(anim => 
-    Animated.spring(anim, {
-      toValue: 1,
-      friction: 5,
-      useNativeDriver: true,
-    })
-  )).start();
-
-  // Add pulse animation
-  Animated.loop(
-    Animated.sequence([
-      Animated.timing(pulseAnim, {
-        toValue: 1.05,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(pulseAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-    ])
-  ).start();
-}, []);
-
-useEffect(() => {
-  const unsubscribe = auth.onAuthStateChanged(user => {
-    if (user) {
-      fetchUserData();
-    } else {
-      // Handle case where user is not logged in
-      navigation.navigate('Auth');
-    }
-
-
-  });
-  return unsubscribe;
-}, []);
-
-
-
-  // Fetch recent orders
-  const fetchRecentOrders = async () => {
+  // Consolidated data fetching function
+  const fetchAllData = useCallback(async () => {
     try {
+      // Must be signed in
+      const user = auth.currentUser;
+      if (!user) {
+        navigation.navigate('Auth');
+        return;
+      }
+
+      setStatsLoading(true);
       setLoadingOrders(true);
+
+      // 1) Fetch user doc
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        throw new Error('User document not found');
+      }
+
+      const uData = userSnap.data();
+      setUserData(uData);
+      setIsManager(uData.employment?.role === 'manager');
+
+      // 2) Make sure user has a valid cafeId
+      if (!uData.cafeId || typeof uData.cafeId !== 'string') {
+        throw new Error('User is not associated with a valid cafe');
+      }
+
+      // 3) If there's a shiftId, fetch shift doc
+      if (route.params?.shiftId) {
+        const shiftRef = doc(db, 'shifts', route.params.shiftId);
+        const shiftSnap = await getDoc(shiftRef);
+        if (shiftSnap.exists()) {
+          setShiftData(shiftSnap.data());
+        }
+      }
+
+      // 4) Fetch stats & recent orders in parallel
+      await Promise.all([
+        fetchStats(uData.cafeId),
+        fetchRecentOrders(uData.cafeId)
+      ]);
+    } catch (error) {
+      console.error("Error in fetchAllData:", error);
+      Alert.alert("Error", error.message || "Failed to load data");
+    } finally {
+      setStatsLoading(false);
+      setLoadingOrders(false);
+    }
+  }, [navigation, route.params?.shiftId]);
+
+  // Fetch stats
+  const fetchStats = async (cafeId) => {
+    try {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
       const ordersRef = collection(db, 'orders');
       const q = query(
         ordersRef,
-        where('cafeId', '==', userData.cafeId),
+        where('cafeId', '==', cafeId),
+        where('orderFlow.orderedAt', '>=', todayStart),
+        where('status', '!=', 'cancelled')
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      let stats = {
+        totalSales: 0,
+        totalOrders: 0,
+        averageOrderValue: 0,
+        completedOrders: 0,
+        preparingOrders: 0,
+      };
+
+      querySnapshot.forEach((d) => {
+        const data = d.data();
+        stats.totalSales += data.pricing?.total || 0;
+        stats.totalOrders++;
+        if (data.status === 'completed') {
+          stats.completedOrders++;
+        } else if (data.status === 'preparing') {
+          stats.preparingOrders++;
+        }
+      });
+
+      if (stats.totalOrders > 0) {
+        stats.averageOrderValue = stats.totalSales / stats.totalOrders;
+      }
+
+      // Merge stats into shiftData (or store it separately, up to you)
+      setShiftData((prev) => ({ ...prev, ...stats }));
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      throw error; // Rethrow so fetchAllData catch can handle it if desired
+    }
+  };
+
+  // Fetch recent orders
+  const fetchRecentOrders = async (cafeId) => {
+    try {
+      console.log('Fetching orders for cafe:', cafeId);
+
+      if (!cafeId || typeof cafeId !== 'string') {
+        throw new Error('Invalid cafe ID provided');
+      }
+
+      const ordersRef = collection(db, 'orders');
+      const q = query(
+        ordersRef,
+        where('cafeId', '==', cafeId),
         orderBy('orderFlow.orderedAt', 'desc'),
         limit(5)
       );
 
       const querySnapshot = await getDocs(q);
-      const orders = [];
 
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        orders.push({
-          id: doc.id,
+      const orders = querySnapshot.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
           ...data,
+          // Convert Firestore Timestamp -> JS Date
           orderFlow: {
             ...data.orderFlow,
-            orderedAt: data.orderFlow.orderedAt?.toDate() || new Date(),
-          }
-        });
+            orderedAt: data.orderFlow?.orderedAt?.toDate() || new Date(),
+          },
+        };
       });
 
       setRecentOrders(orders);
     } catch (error) {
-      console.error('Error fetching recent orders:', error);
-    } finally {
-      setLoadingOrders(false);
+      console.error('Detailed fetchRecentOrders error:', {
+        error,
+        cafeId,
+        timestamp: new Date().toISOString(),
+      });
+      throw error;
     }
   };
 
-  // Fetch and set user data
-  const fetchUserData = async () => {
-    const user = auth.currentUser;
-    if (user) {
-      try {
-        const userRef = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(userRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setIsManager(data.employment?.role === 'manager' || false);
-          setUserData(data);
-          
-          // Fetch shift data if we have a shiftId
-          if (route.params?.shiftId) {
-            const shiftRef = doc(db, 'shifts', route.params.shiftId);
-            const shiftSnap = await getDoc(shiftRef);
-            if (shiftSnap.exists()) {
-              setShiftData(shiftSnap.data());
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error reading user data:", error);
-      }
-    }
-  };
+  // Start animations on mount
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideUpAnim, {
+        toValue: 0,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+      Animated.spring(headerSlideAnim, {
+        toValue: 0,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+      Animated.spring(ordersSlideAnim, {
+        toValue: 0,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+      Animated.spring(statsCardScale, {
+        toValue: 1,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-  // Format time ago helper function
+    // Stagger the “featureAnimations”
+    Animated.stagger(
+      100, 
+      featureAnimations.map(anim =>
+        Animated.spring(anim, {
+          toValue: 1,
+          friction: 5,
+          useNativeDriver: true,
+        })
+      )
+    ).start();
+
+    // Pulse anim loop
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  // Format “time ago” helper
   const formatTimeAgo = (date) => {
     const now = new Date();
     const diffMs = now - date;
@@ -209,29 +282,39 @@ useEffect(() => {
     return date.toLocaleDateString();
   };
 
-  // Get status color based on order status
+  // Status color
   const getStatusColor = (status) => {
     switch (status) {
-      case 'completed': return Palette.success;
-      case 'preparing': return Palette.warning;
-      case 'served': return '#4ECDC4';
-      case 'cancelled': return Palette.error;
-      default: return Palette.primary;
+      case 'completed':
+        return Palette.success;
+      case 'preparing':
+        return Palette.warning;
+      case 'served':
+        return '#4ECDC4';
+      case 'cancelled':
+        return Palette.error;
+      default:
+        return Palette.primary;
     }
   };
 
-  // Get status icon based on order status
+  // Status icon
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'completed': return 'check-circle';
-      case 'preparing': return 'clock';
-      case 'served': return 'truck-delivery';
-      case 'cancelled': return 'close-circle';
-      default: return 'receipt';
+      case 'completed':
+        return 'check-circle';
+      case 'preparing':
+        return 'clock';
+      case 'served':
+        return 'truck-delivery';
+      case 'cancelled':
+        return 'close-circle';
+      default:
+        return 'receipt';
     }
   };
 
-  // Quick actions array for POS
+  // Quick actions for the POS
   const quickActions = [
     {
       icon: 'point-of-sale',
@@ -255,128 +338,114 @@ useEffect(() => {
     },
   ];
 
-  // Handler for order item press
+  // Tap on a recent order
   const handleOrderPress = (order) => {
     Haptics.selectionAsync();
     navigation.navigate('OrderDetail', { orderId: order.id });
   };
 
-  // Handler for manager dashboard
+  // Manager tools callback
   const handleDashboardPress = (tab) => {
     navigation.navigate('Manager', { screen: tab || 'Dashboard' });
   };
 
-  // Initialize screen data
-  const initializeScreen = useCallback(() => {
-    fetchUserData().then(() => {
-      if (userData?.cafeId) {
-        fetchRecentOrders();
-      }
-    });
-  }, [userData?.cafeId]);
-
-  useFocusEffect(initializeScreen);
-
   return (
-  
-      <View style={styles.screenContainer}>
-        {/* Sidebar */}
-        <Sidebar 
-          isVisible={isSidebarVisible} 
-          onClose={() => setIsSidebarVisible(false)}
-          isManager={isManager}
-        />
+    <View style={styles.screenContainer}>
+      {/* Sidebar */}
+      <Sidebar 
+        isVisible={isSidebarVisible} 
+        onClose={() => setIsSidebarVisible(false)}
+        isManager={isManager}
+      />
 
-        <Animated.View
-          style={{
-            flex: 1,
-            opacity: fadeAnim,
-            transform: [
-              { scale: scaleAnim }, 
-              { translateY: slideUpAnim },
-            ],
-          }}
+      <Animated.View
+        style={{
+          flex: 1,
+          opacity: fadeAnim,
+          transform: [
+            { scale: scaleAnim }, 
+            { translateY: slideUpAnim },
+          ],
+        }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}
+          {/* Menu Button to open sidebar */}
+          <POSMenuButton
+            onPress={() => setIsSidebarVisible(true)}
+            menuButtonScale={menuButtonScale}
+            colors={colors}
+            styles={styles}
+          />
+
+          {/* Header / User info */}
+          <Animated.View 
+            style={[
+              styles.headerContainer,
+              { transform: [{ translateX: headerSlideAnim }] },
+            ]}
           >
-            {/* Menu Button */}
-            <POSMenuButton
-              onPress={() => setIsSidebarVisible(true)}
-              menuButtonScale={menuButtonScale}
+            <POSUserHeader
+              userData={userData}
+              pulseAnim={pulseAnim}
               colors={colors}
               styles={styles}
             />
+          </Animated.View>
 
-            {/* Header / User Info */}
-            <Animated.View 
-              style={[
-                styles.headerContainer,
-                { transform: [{ translateX: headerSlideAnim }] },
-              ]}
-            >
-              <POSUserHeader
-                userData={userData}
-                pulseAnim={pulseAnim}
-                colors={colors}
-                styles={styles}
-              />
-            </Animated.View>
+          {/* Stats Card */}
+          <POSStatsCard
+            shiftData={shiftData}
+            statsCardScale={statsCardScale}
+            colors={colors}
+            styles={styles}
+            isLoading={statsLoading}
+          />
 
-            {/* Stats Card */}
-            <POSStatsCard
-              shiftData={shiftData}
-              statsCardScale={statsCardScale}
+          {/* Quick Actions */}
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <POSQuickActions
+            actions={quickActions}
+            featureAnimations={featureAnimations}
+            pulseAnim={pulseAnim}
+            styles={styles}
+          />
+
+          {/* Recent Orders */}
+          <Text style={styles.sectionTitle}>Recent Orders</Text>
+          <Animated.View 
+            style={[
+              styles.ordersCard, 
+              { transform: [{ translateX: ordersSlideAnim }] },
+            ]}
+          >
+            <RecentOrders
+              recentOrders={recentOrders}
+              loadingOrders={loadingOrders}
+              styles={styles}
               colors={colors}
-              styles={styles}
+              onOrderPress={handleOrderPress}
+              getStatusColor={getStatusColor}
+              getStatusIcon={getStatusIcon}
+              formatTimeAgo={formatTimeAgo}
             />
+          </Animated.View>
 
-            {/* Quick Actions */}
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <POSQuickActions
-              actions={quickActions}
-              featureAnimations={featureAnimations}
-              pulseAnim={pulseAnim}
-              styles={styles}
-            />
-
-            {/* Recent Orders */}
-            <Text style={styles.sectionTitle}>Recent Orders</Text>
-            <Animated.View 
-              style={[
-                styles.ordersCard, 
-                { transform: [{ translateX: ordersSlideAnim }] },
-              ]}
-            >
-              <RecentOrders
-                recentOrders={recentOrders}
-                loadingOrders={loadingOrders}
-                styles={styles}
-                colors={colors}
-                onOrderPress={handleOrderPress}
-                getStatusColor={getStatusColor}
-                getStatusIcon={getStatusIcon}
-                formatTimeAgo={formatTimeAgo}
-              />
-            </Animated.View>
-
-            {/* Manager Tools */}
-            <ManagerTools
-              isManager={isManager}
-              onDashboardPress={handleDashboardPress}
-              featureAnimations={featureAnimations}
-              pulseAnim={pulseAnim}
-              styles={styles}
-            />
-          </ScrollView>
-        </Animated.View>
-      </View>
-
+          {/* Manager Tools */}
+          <ManagerTools
+            isManager={isManager}
+            onDashboardPress={handleDashboardPress}
+            featureAnimations={featureAnimations}
+            pulseAnim={pulseAnim}
+            styles={styles}
+          />
+        </ScrollView>
+      </Animated.View>
+    </View>
   );
 };
-
-
 
 const makeStyles = (colors) => 
   StyleSheet.create({
@@ -445,14 +514,14 @@ const makeStyles = (colors) =>
       color: Palette.text, // Primary text color
       letterSpacing: 0.5,
     },
+        
     statsCard: {
       borderRadius: 20,
       padding: 20,
       marginBottom: 28,
-      backgroundColor: Palette.surfaceContainerHigh, // Elevated container
-     
+      backgroundColor: Palette.surfaceContainerHigh,
       borderWidth: 1,
-      borderColor: Palette.borderLight, // Light border
+      borderColor: Palette.borderLight,
     },
     statsRow: {
       flexDirection: 'row',
@@ -462,21 +531,23 @@ const makeStyles = (colors) =>
     statItem: {
       alignItems: 'center',
       flex: 1,
+      minWidth: 80, // Ensure minimum width for each item
     },
     statDivider: {
-      width: 2,
+      width: 1, // Made thinner to save space
       height: 40,
       backgroundColor: Palette.divider, 
-      marginHorizontal: 15,
+      marginHorizontal: 8, // Reduced margin
     },
     statValue: {
-      fontSize: 28,
+      fontSize: 24, // Slightly smaller to allow for large numbers
       fontWeight: '700',
       marginBottom: 6,
       color: colors.primary,
+      maxWidth: '100%', // Ensure text doesn't overflow
     },
     statLabel: {
-      fontSize: 13,
+      fontSize: 12, // Slightly smaller
       textAlign: 'center',
       color: Palette.textMuted,
       fontWeight: '500',

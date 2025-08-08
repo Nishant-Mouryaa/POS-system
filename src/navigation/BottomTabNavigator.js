@@ -17,13 +17,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import POSScreen from '../screens/home/POSScreen';
-import TextbooksScreen from '../screens/Textbooks/TextbooksScreen';
-import OnlineTestScreen from '../screens/Test/OnlineTestScreen';
-import AdminStack from './AdminStack';
 import { Palette } from '../theme/colors';
-import MenuCategoryScreen from '../screens/Textbooks/MenuCategoryScreen';
+import MenuCategoryScreen from '../screens/Menu/MenuCategoryScreen';
 import MessageCenterScreen from '../screens/messagecenter/MessageCenterScreen';
-import OrderManagementScreen from '../screens/Test/OrderManagementScreen';
+import OrderManagementScreen from '../screens/Order/OrderManagementScreen';
 
 const { width } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();

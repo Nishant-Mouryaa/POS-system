@@ -6,29 +6,18 @@ import SignupScreen from '../screens/auth/SignupScreen';
 import BottomTabNavigator from './BottomTabNavigator';
 import AdminStack from './AdminStack'; // Import the new AdminStack
 import PdfViewerScreen from '../screens/PdfViewerScreen';
-import BoardSelectionScreen from '../screens/Test/BoardSelectionScreen';
-import StandardSelectionScreen from '../screens/Test/StandardSelectionScreen';
-import SubjectSelectionScreen from '../screens/Test/SubjectSelectionScreen';
-import ChapterSelectionScreen from '../screens/Test/ChapterSelectionScreen';
-import TestListScreen from '../screens/Test/TestListScreen';
-import TestScreen from '../screens/Test/TestScreen';
-import TestHistoryScreen from '../screens/Test/TestHistoryScreen';
 import AboutUsScreen from '../screens/sidebar/AboutUsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import OnlineTestScreen from '../screens/Test/OnlineTestScreen';
-import IntroScreen from '../screens/auth/IntroScreen';
-import MenuCategoryScreen from '../screens/Textbooks/MenuCategoryScreen';
-import TextbookClass from '../screens/Textbooks/TextbookClass';
-import TextbookSubject from '../screens/Textbooks/TextbookSubject';
-import TextbooksList from '../screens/Textbooks/TextbooksListScreen';
+import MenuCategoryScreen from '../screens/Menu/MenuCategoryScreen';
+
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useEffect, useState } from 'react';
-import MenuItemsScreen from '../screens/Textbooks/MenuItemsScreen';
-import CartScreen from '../screens/Textbooks/CartScreen';
-import ItemDetail from '../screens/Textbooks/ItemDetail';
-import OrderConfirmation from '../screens/Textbooks/OrderConfirmation';
-import OrderDetailScreen from '../screens/Test/OrderDetailScreen';
+import MenuItemsScreen from '../screens/Menu/MenuItemsScreen';
+import CartScreen from '../screens/Menu/CartScreen';
+import ItemDetail from '../screens/Menu/ItemDetail';
+import OrderConfirmation from '../screens/Menu/OrderConfirmation';
+import OrderDetailScreen from '../screens/Order/OrderDetailScreen';
 
 
 const AuthStack = createStackNavigator();
@@ -46,14 +35,8 @@ const MainNavigator = () => (
   <AppStack.Navigator screenOptions={{ headerShown: false }}>
     <AppStack.Screen name="Main" component={BottomTabNavigator} />
 
-    <AppStack.Screen name="BoardSelection" component={BoardSelectionScreen} />
-    <AppStack.Screen name="StandardSelection" component={StandardSelectionScreen} />
-    <AppStack.Screen name="SubjectSelection" component={SubjectSelectionScreen} />
-    <AppStack.Screen name="ChapterSelection" component={ChapterSelectionScreen} />
-    <AppStack.Screen name="TestList" component={TestListScreen} />
-    <AppStack.Screen name="TestScreen" component={TestScreen} />
-    <AppStack.Screen name="OnlineTest" component={OnlineTestScreen} />
-    <AppStack.Screen name="TestHistory" component={TestHistoryScreen} />
+
+
     <AppStack.Screen name="AboutUs" component={AboutUsScreen} />
     <AppStack.Screen name="Settings" component={SettingsScreen} />
     <AppStack.Screen name="Profile" component={ProfileScreen} />
@@ -68,9 +51,7 @@ const MainNavigator = () => (
   options={{ /* your options */ }} 
   initialParams={{ onAddToCart: (item) => console.log(item) }} // Default function if not provided
 />
-    <AppStack.Screen name="TextbookClass" component={TextbookClass} />
-    <AppStack.Screen name="TextbookSubject" component={TextbookSubject} />
-    <AppStack.Screen name="TextbooksList" component={TextbooksList} />
+   
     <AppStack.Screen name="OrderConfirmation" component={OrderConfirmation} />
 
     <AppStack.Screen name="Admin" component={AdminStack} />
