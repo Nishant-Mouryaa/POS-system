@@ -1,4 +1,4 @@
-// components/StatusFilterChips.js
+
 import React, { useRef } from 'react';
 import { Animated, ScrollView, TouchableOpacity, View } from 'react-native';
 import { Text } from 'react-native-paper';
@@ -28,7 +28,13 @@ const StatusFilterChips = ({
   const getOrderCountForStatus = (status) => {
     try {
       if (!Array.isArray(orders)) return 0;
-      return orders.filter(o => o?.status === status).length;
+
+      if (status === 'all') {
+        return orders.length;
+      } else {
+        // Note we now compare o.orderFlow?.status instead of o.status
+        return orders.filter(o => o?.orderFlow?.status === status).length;
+      }
     } catch (error) {
       console.error('Error counting orders:', error);
       return 0;
@@ -38,12 +44,12 @@ const StatusFilterChips = ({
   // Get color based on status
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return Palette.warning;
-      case 'preparing': return Palette.accent;
-      case 'ready': return Palette.success;
-      case 'completed': return Palette.secondary;
-      case 'cancelled': return Palette.error;
-      default: return Palette.primary;
+      case 'pending':    return Palette.warning;
+      case 'preparing':  return Palette.accent;
+      case 'ready':      return Palette.success;
+      case 'completed':  return Palette.secondary;
+      case 'cancelled':  return Palette.error;
+      default:           return Palette.primary;
     }
   };
 
@@ -81,49 +87,58 @@ const StatusFilterChips = ({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.container}
     >
-      {statusOptions.map((option, index) => (
-        <Animated.View 
-          key={option.value}
-          style={{ transform: [{ scale: scaleValues[index] }] }}
-        >
-          <TouchableOpacity
-            style={[
-              styles.chip,
-              statusFilter === option.value && {
-                backgroundColor: getStatusColor(option.value),
-                borderColor: getStatusColor(option.value),
-              }
-            ]}
-            onPress={() => handleStatusPress(option.value, index)}
-            onPressIn={() => handlePressIn(index)}
-            onPressOut={() => handlePressOut(index)}
-            activeOpacity={0.9}
+      {statusOptions.map((option, index) => {
+        const color = getStatusColor(option.value); 
+        const isActive = statusFilter === option.value;
+        const count = option.value !== 'all' ? getOrderCountForStatus(option.value) : 0;
+
+        return (
+          <Animated.View 
+            key={option.value}
+            style={{ transform: [{ scale: scaleValues[index] }] }}
           >
-            <MaterialCommunityIcons 
-              name={option.icon} 
-              size={16} 
-              color={statusFilter === option.value ? Palette.textOnPrimary : getStatusColor(option.value)} 
-              style={styles.icon}
-            />
-            <Text style={[
-              styles.text,
-              statusFilter === option.value && styles.textActive
-            ]}>
-              {option.label}
-            </Text>
-            {statusFilter !== option.value && option.value !== 'all' && (
-              <View style={[
-                styles.badge,
-                { backgroundColor: `${getStatusColor(option.value)}20` }
-              ]}>
-                <Text style={[styles.badgeText, { color: getStatusColor(option.value) }]}>
-                  {getOrderCountForStatus(option.value)}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </Animated.View>
-      ))}
+            <TouchableOpacity
+              style={[
+                styles.chip,
+                isActive && {
+                  backgroundColor: color,
+                  borderColor: color,
+                }
+              ]}
+              onPress={() => handleStatusPress(option.value, index)}
+              onPressIn={() => handlePressIn(index)}
+              onPressOut={() => handlePressOut(index)}
+              activeOpacity={0.9}
+            >
+              <MaterialCommunityIcons 
+                name={option.icon} 
+                size={16} 
+                color={isActive ? Palette.textOnPrimary : color} 
+                style={styles.icon}
+              />
+              <Text 
+                style={[
+                  styles.text,
+                  isActive && styles.textActive
+                ]}
+              >
+                {option.label}
+              </Text>
+
+              {!isActive && option.value !== 'all' && (
+                <View style={[
+                  styles.badge,
+                  { backgroundColor: `${color}20` }
+                ]}>
+                  <Text style={[styles.badgeText, { color }]}>
+                    {count}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        );
+      })}
     </ScrollView>
   );
 };
