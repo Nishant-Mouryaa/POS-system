@@ -10,6 +10,9 @@ import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ActivityIndicator } from 'react-native';
+import { getAuth } from 'firebase/auth';
+import { Alert } from 'react-native';
+import { serverTimestamp } from 'firebase/firestore';
 
 const OrderDetailScreen = () => {
   const { colors } = useTheme();
@@ -17,6 +20,7 @@ const OrderDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { orderId } = route.params;
+  const auth = getAuth();
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -85,19 +89,48 @@ const OrderDetailScreen = () => {
       useNativeDriver: true,
     }).start();
   };
-
-  const updateOrderStatus = async (newStatus) => {
-    try {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await updateDoc(doc(db, 'orders', orderId), {
-        'orderFlow.status': newStatus,
-        'orderFlow.updatedAt': new Date()
-      });
-    } catch (error) {
-      console.error("Error updating order status:", error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
+  const isValidTransition = (currentStatus, newStatus) => {
+  const validTransitions = {
+    pending: ['preparing', 'cancelled'],
+    preparing: ['ready', 'cancelled'],
+    ready: ['completed', 'cancelled'],
+    completed: [],
+    cancelled: []
   };
+  return validTransitions[currentStatus]?.includes(newStatus);
+};
+
+const updateOrderStatus = async (newStatus) => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert("Authentication Required", "Please sign in to update orders");
+      return;
+    }
+
+    // Validate status transition
+    if (!isValidTransition(order.orderFlow.status, newStatus)) {
+      Alert.alert("Invalid Status", `Cannot change from ${order.orderFlow.status} to ${newStatus}`);
+      return;
+    }
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    
+    // Minimal update that should work with permissive rules
+   await updateDoc(doc(db, "orders", orderId), {
+"orderFlow.status": newStatus,
+"orderFlow.updatedAt": serverTimestamp(),
+});
+
+  } catch (error) {
+    console.error("Update Error:", error);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    Alert.alert(
+      "Update Failed", 
+      error.message || "Could not update order status"
+    );
+  }
+};
 
 const getStatusColor = (status) => {
   if (!status) return Palette.primary; // Handle undefined/null

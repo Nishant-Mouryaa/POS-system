@@ -80,65 +80,101 @@ export default function CartScreen({ navigation, route }) {
     });
   };
 
-  const processOrder = async () => {
-    try {
-      setIsProcessing(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+const processOrder = async () => {
+  try {
+    setIsProcessing(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    
+    const user = auth.currentUser;
+    if (!user) throw new Error('User not authenticated');
 
-      // Get cafeId from the first item (all items should be from same cafe)
-      const cafeId = cartItems[0]?.cafeId;
-      if (!cafeId) throw new Error('No cafe ID found');
+    // Get cafeId from the first item (all items should be from same cafe)
+    const cafeId = cartItems[0]?.cafeId;
+    if (!cafeId) throw new Error('No cafe ID found');
 
-      // Create order document
-      const orderRef = await addDoc(collection(db, 'orders'), {
-        cafeId,
-        items: cartItems.map(item => ({
-          itemId: item.id,
-          name: item.basicInfo.name,
-          quantity: 1,
-          unitPrice: item.pricing.basePrice,
-          customizations: item.customizations,
-          totalPrice: item.pricing.basePrice + (item.customizations?.size?.price || 0) + 
-                     (item.customizations?.options?.reduce((sum, opt) => sum + (opt.price || 0), 0) || 0),
-          notes: item.notes || ''
-        })),
-        pricing: {
-          subtotal,
-          tax,
-          serviceCharge,
-          discount: 0,
-          total,
-          currency: cartItems[0]?.pricing?.currency || 'INR'
-        },
+    // Prepare items array with proper structure
+    const items = cartItems.map(item => ({
+      itemId: item.id,
+      name: item.basicInfo.name,
+      quantity: 1, // You might want to make this dynamic
+      unitPrice: item.pricing.basePrice,
+      totalPrice: item.pricing.basePrice + (item.customizations?.size?.price || 0) + 
+                 (item.customizations?.options?.reduce((sum, opt) => sum + (opt.price || 0), 0) || 0),
+      notes: item.notes || '',
+      customizations: [
+        ...(item.customizations?.size ? [{
+          customizationId: `size_${item.customizations.size.name.toLowerCase().replace(/\s+/g, '_')}`,
+          name: 'Size',
+          price: item.customizations.size.price,
+          selectedOption: item.customizations.size.name
+        }] : []),
+        ...(item.customizations?.options?.map(opt => ({
+          customizationId: `opt_${opt.name.toLowerCase().replace(/\s+/g, '_')}`,
+          name: opt.name,
+          price: opt.price,
+          selectedOption: opt.name
+        })) || [])
+      ]
+    }));
+
+    // Create order document with complete structure
+    const orderRef = await addDoc(collection(db, 'orders'), {
+      cafeId,
+      customer: {
+        customerId: user.uid,
+        name: user.displayName || 'Customer',
+        email: user.email || '',
+        phone: '', // You might want to collect this separately
+        loyaltyNumber: '' // Add if you have loyalty program
+      },
+      dining: {
+        tableNumber: 1, // You should get this from user input
+        numberOfGuests: 1, // You should get this from user input
+        specialRequests: '' // You should get this from user input
+      },
+      items,
+      orderFlow: {
+        orderedAt: serverTimestamp(),
+        estimatedReadyTime: null, // You might calculate this based on items
+        completedAt: null,
+        orderNumber: `ORD-${Date.now()}` // Generate a proper order number
+      },
+      payment: {
+        method: 'cash', // You should get this from user input
         status: 'pending',
-        type: 'dine_in', // Could be dynamic
-        orderFlow: {
-          orderedAt: serverTimestamp(),
-          estimatedReadyTime: null,
-          completedAt: null
-        },
-        staff: {
-          cashierId: user.uid,
-          cashierName: user.displayName || 'Staff'
-        },
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
+        transactionId: null
+      },
+      pricing: {
+        subtotal,
+        tax,
+        serviceCharge,
+        discount: 0,
+        total,
+        currency: cartItems[0]?.pricing?.currency || 'INR'
+      },
+      staff: {
+        cashierId: user.uid,
+        cashierName: user.displayName || 'Staff',
+        kitchenAssignedTo: null,
+        servedBy: null
+      },
+      status: 'pending',
+      type: 'dine_in', // You should get this from user input
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
 
-      // Clear cart and navigate to order confirmation
-      setCartItems([]);
-      navigation.replace('OrderConfirmation', { orderId: orderRef.id });
-    } catch (error) {
-      console.error("Error processing order:", error);
-      Alert.alert("Error", "Failed to process order. Please try again.");
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+    // Clear cart and navigate to order confirmation
+    setCartItems([]);
+    navigation.replace('OrderConfirmation', { orderId: orderRef.id });
+  } catch (error) {
+    console.error("Error processing order:", error);
+    Alert.alert("Error", "Failed to process order. Please try again.");
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const confirmClearCart = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);

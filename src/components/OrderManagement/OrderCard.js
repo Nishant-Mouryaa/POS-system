@@ -1,4 +1,3 @@
-// components/OrderCard.js
 import React, { useState, useRef } from 'react';
 import { Animated, TouchableOpacity, View } from 'react-native';
 import { Text, Menu, Divider } from 'react-native-paper';
@@ -35,46 +34,52 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
   };
 
   const handleStatusChange = (newStatus) => {
+    // This calls your parent’s function, which updates Firestore with:
+    //   "orderFlow.status": newStatus
+    //   "orderFlow.updatedAt": serverTimestamp()
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onStatusChange(newStatus);
     setVisibleMenu(false);
   };
 
+  // Instead of using order.status, read from order.orderFlow.status:
+  const currentStatus = order.orderFlow?.status || 'pending'; 
+
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return Palette.warning;
-      case 'preparing': return Palette.accent;
-      case 'ready': return Palette.success;
-      case 'completed': return Palette.secondary;
-      case 'cancelled': return Palette.error;
-      default: return Palette.primary;
+      case 'pending':    return Palette.warning;
+      case 'preparing':  return Palette.accent;
+      case 'ready':      return Palette.success;
+      case 'completed':  return Palette.secondary;
+      case 'cancelled':  return Palette.error;
+      default:           return Palette.primary;
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'pending': return 'clock';
-      case 'preparing': return 'clock-outline';
-      case 'ready': return 'check-circle';
-      case 'completed': return 'checkbox-marked-circle';
-      case 'cancelled': return 'cancel';
-      default: return 'help-circle';
+      case 'pending':    return 'clock';
+      case 'preparing':  return 'clock-outline';
+      case 'ready':      return 'check-circle';
+      case 'completed':  return 'checkbox-marked-circle';
+      case 'cancelled':  return 'cancel';
+      default:           return 'help-circle';
     }
   };
 
   const getOrderTypeIcon = (type) => {
     switch (type) {
-      case 'dine_in': return 'table-chair';
+      case 'dine_in':  return 'table-chair';
       case 'takeaway': return 'bag-suitcase';
       case 'delivery': return 'motorbike';
-      default: return 'help-circle-outline';
+      default:         return 'help-circle-outline';
     }
   };
 
   const renderMenuItems = () => {
     const items = [];
-    
-    if (order.status === 'pending') {
+
+    if (currentStatus === 'pending') {
       items.push(
         <Menu.Item 
           key="preparing"
@@ -84,8 +89,8 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
         />
       );
     }
-    
-    if (order.status === 'preparing') {
+
+    if (currentStatus === 'preparing') {
       items.push(
         <Menu.Item 
           key="ready"
@@ -95,8 +100,8 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
         />
       );
     }
-    
-    if (order.status === 'ready') {
+
+    if (currentStatus === 'ready') {
       items.push(
         <Menu.Item 
           key="completed"
@@ -106,8 +111,8 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
         />
       );
     }
-    
-    if (order.status !== 'cancelled') {
+
+    if (currentStatus !== 'cancelled') {
       items.push(
         <Menu.Item 
           key="cancel"
@@ -140,7 +145,7 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
       <TouchableOpacity 
         style={[
           styles.orderCard,
-          { borderLeftColor: getStatusColor(order.status) }
+          { borderLeftColor: getStatusColor(currentStatus) }
         ]}
         onPress={handlePress}
         onPressIn={handlePressIn}
@@ -149,21 +154,25 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
       >
         <View style={styles.orderHeader}>
           <View>
-            <Text style={styles.orderNumber}>#{order.orderNumber || order.id.slice(0, 8)}</Text>
+            <Text style={styles.orderNumber}>
+              #{order.orderNumber || order.id?.slice(0, 8)}
+            </Text>
             <Text style={styles.orderTime}>
-              {formatDistanceToNow(order.orderFlow.orderedAt, { addSuffix: true })}
+              {order.orderFlow?.orderedAt
+                ? formatDistanceToNow(order.orderFlow.orderedAt, { addSuffix: true })
+                : 'Just now'}
             </Text>
           </View>
           
-          <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(order.status)}20` }]}>
+          <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(currentStatus)}20` }]}>
             <MaterialCommunityIcons 
-              name={getStatusIcon(order.status)} 
+              name={getStatusIcon(currentStatus)} 
               size={16} 
-              color={getStatusColor(order.status)} 
+              color={getStatusColor(currentStatus)} 
               style={styles.statusIcon}
             />
-            <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
-              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+            <Text style={[styles.statusText, { color: getStatusColor(currentStatus) }]}>
+              {currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
             </Text>
           </View>
         </View>
@@ -176,20 +185,27 @@ const OrderCard = ({ order, onPress, onStatusChange }) => {
               color={Palette.textMuted} 
             />
             <Text style={styles.orderTypeText}>
-              {order.type === 'dine_in' ? 'Dine In' : 
-               order.type === 'takeaway' ? 'Takeaway' : 
-               order.type === 'delivery' ? 'Delivery' : 'Other'}
+              {order.type === 'dine_in' 
+                ? 'Dine In' 
+                : order.type === 'takeaway'
+                ? 'Takeaway'
+                : order.type === 'delivery'
+                ? 'Delivery'
+                : 'Other'}
             </Text>
             
             {order.dining?.tableNumber && (
               <View style={styles.tableBadge}>
-                <Text style={styles.tableNumber}>Table {order.dining.tableNumber}</Text>
+                <Text style={styles.tableNumber}>
+                  Table {order.dining.tableNumber}
+                </Text>
               </View>
             )}
           </View>
 
           <Text style={styles.itemsText} numberOfLines={1}>
-            {order.items.length} item{order.items.length > 1 ? 's' : ''}: {order.items.map(i => i.name).join(', ')}
+            {order.items.length} item{order.items.length > 1 ? 's' : ''}: 
+            {' ' + order.items.map(i => i.name).join(', ')}
           </Text>
         </View>
 
@@ -313,3 +329,4 @@ const styles = {
 };
 
 export default OrderCard;
+ 
