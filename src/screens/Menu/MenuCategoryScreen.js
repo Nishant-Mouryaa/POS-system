@@ -6,24 +6,21 @@ import {
   Platform,
   StyleSheet,
   Dimensions,
-  Animated,
   ActivityIndicator
 } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Palette } from '../../theme/colors';
-import { collection, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
 const { width } = Dimensions.get('window');
 
-export default function MenuCategoryScreen({ navigation }) { 
-  const [showIntro, setShowIntro] = useState(true);
+export default function MenuCategoryScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState(null);
   const [cafeId, setCafeId] = useState(null);
-  const fadeAnim = useState(new Animated.Value(1))[0];
 
   // Fetch user data and cafeId
   useEffect(() => {
@@ -31,7 +28,7 @@ export default function MenuCategoryScreen({ navigation }) {
       try {
         setLoading(true);
         const user = auth.currentUser;
-        
+
         if (!user) {
           setError('User not authenticated');
           return;
@@ -73,10 +70,10 @@ export default function MenuCategoryScreen({ navigation }) {
           where('cafeId', '==', cafeId),
           where('isAvailable', '==', true)
         );
-        
+
         const querySnapshot = await getDocs(q);
         const loadedCategories = [];
-        
+
         querySnapshot.forEach((doc) => {
           loadedCategories.push({
             id: doc.id,
@@ -98,18 +95,8 @@ export default function MenuCategoryScreen({ navigation }) {
     fetchCategories();
   }, [cafeId]);
 
-  const handleContinue = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 500,
-      useNativeDriver: true,
-    }).start(() => setShowIntro(false));
-  };
-
-
-
   const handleCategoryPress = (category) => {
-    navigation.navigate('MenuItems', { 
+    navigation.navigate('MenuItems', {
       categoryId: category.id,
       categoryName: category.name,
       cafeId: cafeId
@@ -127,170 +114,100 @@ export default function MenuCategoryScreen({ navigation }) {
     return 'food-fork-drink';
   };
 
-  if (showIntro) {
-    return (
-
-        <Animated.View style={[styles.introContainer, { opacity: fadeAnim }]}>
-          <View style={styles.introContent}>
-            <Icon name="silverware-fork-knife" size={60} color={Palette.primary} style={styles.introIcon} />
-            <Text style={styles.introTitle}>Welcome to the Menu</Text>
-            <Text style={styles.introText}>
-              Browse our delicious offerings by category. 
-              Select a category to view all available items.
-            </Text>
-            <Button
-              mode="contained"
-              onPress={handleContinue}
-              style={styles.continueButton}
-              labelStyle={styles.continueButtonText}
-              disabled={!cafeId || loading}
-            >
-              {loading ? 'Loading...' : 'View Menu'}
-            </Button>
-
-          </View>
-        </Animated.View>
-      
-    );
-  }
-
   if (loading) {
     return (
-    
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Palette.primary} />
-          <Text style={styles.loadingText}>
-            {!cafeId ? 'Loading user data...' : 'Loading menu categories...'}
-          </Text>
-        </View>
-     
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Palette.primary} />
+        <Text style={styles.loadingText}>
+          {!cafeId ? 'Loading user data...' : 'Loading menu categories...'}
+        </Text>
+      </View>
     );
   }
 
   if (error) {
     return (
-     
-        <View style={styles.errorContainer}>
-          <Icon name="alert-circle" size={48} color={Palette.error} />
-          <Text style={styles.errorText}>{error}</Text>
-          <Button
-            mode="contained"
-            onPress={() => navigation.goBack()}
-            style={styles.errorButton}
-          >
-            Go Back
-          </Button>
-        </View>
-  
+      <View style={styles.errorContainer}>
+        <Icon name="alert-circle" size={48} color={Palette.error} />
+        <Text style={styles.errorText}>{error}</Text>
+        <Button
+          mode="contained"
+          onPress={() => navigation.goBack()}
+          style={styles.errorButton}
+        >
+          Go Back
+        </Button>
+      </View>
     );
   }
 
   return (
-  
-      <View style={styles.screenContainer}>
-        <Text style={styles.selectionTitle}>Menu Categories</Text>
-        <Text style={styles.selectionSubtitle}>
-          Select a category to view available items
-        </Text>
+    <View style={styles.screenContainer}>
+      <Text style={styles.selectionTitle}>Menu Categories</Text>
+      <Text style={styles.selectionSubtitle}>
+        Select a category to view available items
+      </Text>
 
-        <ScrollView
-          contentContainerStyle={[
-            styles.categoryListContainer,
-            categories.length === 0 && { flexGrow: 1 }
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          {categories.length > 0 ? (
-            categories.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={styles.categoryCard}
-                activeOpacity={0.85}
-                onPress={() => handleCategoryPress(category)}
-              >
-                <View style={styles.categoryCardContent}>
-                  <View style={[
+      <ScrollView
+        contentContainerStyle={[
+          styles.categoryListContainer,
+          categories.length === 0 && { flexGrow: 1 }
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {categories.length > 0 ? (
+          categories.map((category) => (
+            <TouchableOpacity
+              key={category.id}
+              style={styles.categoryCard}
+              activeOpacity={0.85}
+              onPress={() => handleCategoryPress(category)}
+            >
+              <View style={styles.categoryCardContent}>
+                <View
+                  style={[
                     styles.categoryIconContainer,
                     { backgroundColor: Palette.primary }
-                  ]}>
-                    <Icon 
-                      name={getCategoryIcon(category.name)} 
-                      size={28} 
-                      color="#fff" 
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.categoryTitle}>{category.name}</Text>
-                    <Text style={styles.categoryDescription} numberOfLines={2}>
-                      {category.description || 'Browse our delicious offerings'}
-                    </Text>
-                  </View>
-                  <Icon name="chevron-right" size={24} color={Palette.primary} />
-                </View>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Icon name="tray-remove" size={48} color={Palette.textMuted} />
-              <Text style={styles.emptyText}>No categories available</Text>
-              {cafeId && (
-                <Button
-                  mode="outlined"
-                  onPress={() => setLoading(true)}
-                  style={styles.retryButton}
-                  color={Palette.primary}
+                  ]}
                 >
-                  Retry
-                </Button>
-              )}
-            </View>
-          )}
-        </ScrollView>
-      </View>
-
+                  <Icon
+                    name={getCategoryIcon(category.name)}
+                    size={28}
+                    color="#fff"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.categoryTitle}>{category.name}</Text>
+                  <Text style={styles.categoryDescription} numberOfLines={2}>
+                    {category.description || 'Browse our delicious offerings'}
+                  </Text>
+                </View>
+                <Icon name="chevron-right" size={24} color={Palette.primary} />
+              </View>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Icon name="tray-remove" size={48} color={Palette.textMuted} />
+            <Text style={styles.emptyText}>No categories available</Text>
+            {cafeId && (
+              <Button
+                mode="outlined"
+                onPress={() => setLoading(true)}
+                style={styles.retryButton}
+                color={Palette.primary}
+              >
+                Retry
+              </Button>
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  introContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 30,
-  },
-  introContent: {
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-  },
-  introIcon: {
-    marginBottom: 20,
-  },
-  introTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Palette.text,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  introText: {
-    fontSize: 16,
-    color: Palette.text,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 30,
-  },
-  continueButton: {
-    width: '100%',
-    borderRadius: 8,
-    paddingVertical: 8,
-    backgroundColor: Palette.primary,
-  },
-  continueButtonText: {
-    color: Palette.textOnPrimary,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   screenContainer: {
     flex: 1,
     backgroundColor: 'transparent',
