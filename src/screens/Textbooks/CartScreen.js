@@ -1,3 +1,5 @@
+
+// CartScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -6,7 +8,8 @@ import {
   StyleSheet,
   Dimensions,
   Animated,
-  Alert
+  Alert,
+  TextInput // <-- Import TextInput from react-native
 } from 'react-native';
 import { 
   Text, 
@@ -22,16 +25,26 @@ import { db, auth } from '../../config/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import * as Haptics from 'expo-haptics';
 
+
 const { width, height } = Dimensions.get('window');
 
 export default function CartScreen({ navigation, route }) {
   const { items: initialItems } = route.params || {};
   const [cartItems, setCartItems] = useState(initialItems || []);
+
+  // Local state for the staff’s inputs:
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [numberOfGuests, setNumberOfGuests] = useState('1');
+  const [tableNumber, setTableNumber] = useState('1');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Animations
   const slideAnim = useState(new Animated.Value(height))[0];
   const fadeAnim = useState(new Animated.Value(0))[0];
 
-  // Animation on mount
   useEffect(() => {
     Animated.parallel([
       Animated.timing(slideAnim, {
@@ -51,7 +64,7 @@ export default function CartScreen({ navigation, route }) {
   const subtotal = cartItems.reduce((sum, item) => {
     const basePrice = item.pricing?.basePrice || 0;
     const sizePrice = item.customizations?.size?.price || 0;
-    const customizationsPrice = item.customizations?.options?.reduce((sum, opt) => sum + (opt.price || 0), 0) || 0;
+    const customizationsPrice = item.customizations?.options?.reduce((s, opt) => s + (opt.price || 0), 0) || 0;
     return sum + basePrice + sizePrice + customizationsPrice;
   }, 0);
 
@@ -80,104 +93,105 @@ export default function CartScreen({ navigation, route }) {
     });
   };
 
-const processOrder = async () => {
-  try {
-    setIsProcessing(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    
-    const user = auth.currentUser;
-    if (!user) throw new Error('User not authenticated');
+  const processOrder = async () => {
+    try {
+      setIsProcessing(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      const user = auth.currentUser;
+      if (!user) throw new Error('User not authenticated');
 
-    // Get cafeId from the first item (all items should be from same cafe)
-    const cafeId = cartItems[0]?.cafeId;
-    if (!cafeId) throw new Error('No cafe ID found');
+      // Get cafeId from the first item
+      const cafeId = cartItems[0]?.cafeId;
+      if (!cafeId) throw new Error('No cafe ID found');
 
-    // Prepare items array with proper structure
-    const items = cartItems.map(item => ({
-      itemId: item.id,
-      name: item.basicInfo.name,
-      quantity: 1, // You might want to make this dynamic
-      unitPrice: item.pricing.basePrice,
-      totalPrice: item.pricing.basePrice + (item.customizations?.size?.price || 0) + 
-                 (item.customizations?.options?.reduce((sum, opt) => sum + (opt.price || 0), 0) || 0),
-      notes: item.notes || '',
-      customizations: [
-        ...(item.customizations?.size ? [{
-          customizationId: `size_${item.customizations.size.name.toLowerCase().replace(/\s+/g, '_')}`,
-          name: 'Size',
-          price: item.customizations.size.price,
-          selectedOption: item.customizations.size.name
-        }] : []),
-        ...(item.customizations?.options?.map(opt => ({
-          customizationId: `opt_${opt.name.toLowerCase().replace(/\s+/g, '_')}`,
-          name: opt.name,
-          price: opt.price,
-          selectedOption: opt.name
-        })) || [])
-      ]
-    }));
+      // Prepare items
+      const items = cartItems.map(item => ({
+        itemId: item.id,
+        name: item.basicInfo.name,
+        quantity: 1, // or a quantity field if you have it
+        unitPrice: item.pricing.basePrice,
+        totalPrice: item.pricing.basePrice 
+          + (item.customizations?.size?.price || 0) 
+          + (item.customizations?.options?.reduce((sum, opt) => sum + (opt.price || 0), 0) || 0),
+        notes: item.notes || '',
+        customizations: [
+          ...(item.customizations?.size ? [{
+            customizationId: `size_${item.customizations.size.name.toLowerCase().replace(/\s+/g, '_')}`,
+            name: 'Size',
+            price: item.customizations.size.price,
+            selectedOption: item.customizations.size.name
+          }] : []),
+          ...(item.customizations?.options?.map(opt => ({
+            customizationId: `opt_${opt.name.toLowerCase().replace(/\s+/g, '_')}`,
+            name: opt.name,
+            price: opt.price,
+            selectedOption: opt.name
+          })) || [])
+        ]
+      }));
 
-    // Create order document with complete structure
-    const orderRef = await addDoc(collection(db, 'orders'), {
-      cafeId,
-      customer: {
-        customerId: user.uid,
-        name: user.displayName || 'Customer',
-        email: user.email || '',
-        phone: '', // You might want to collect this separately
-        loyaltyNumber: '' // Add if you have loyalty program
-      },
-      dining: {
-        tableNumber: 1, // You should get this from user input
-        numberOfGuests: 1, // You should get this from user input
-        specialRequests: '' // You should get this from user input
-      },
-      items,
-      orderFlow: {
-        orderedAt: serverTimestamp(),
-        estimatedReadyTime: null, // You might calculate this based on items
-        completedAt: null,
-        orderNumber: `ORD-${Date.now()}` // Generate a proper order number
-      },
-      payment: {
-        method: 'cash', // You should get this from user input
+      const orderRef = await addDoc(collection(db, 'orders'), {
+        cafeId,
+        customer: {
+          // Use the staff-entered values here:
+          customerId: '', // For a walk-in customer, leave blank or generate your own
+          name: customerName || 'Guest',
+          email: '',      // If the staff doesn't know the email, leave it blank
+          phone: customerPhone,
+          loyaltyNumber: ''
+        },
+        dining: {
+          tableNumber: parseInt(tableNumber, 10) || 1,
+          numberOfGuests: parseInt(numberOfGuests, 10) || 1,
+          specialRequests: '' 
+        },
+        items,
+     orderFlow: {
+  orderedAt: serverTimestamp(),
+  estimatedReadyTime: null,
+  completedAt: null,
+  orderNumber: `ORD-${new Date().toISOString().replace(/[^0-9]/g, '').slice(-12)}`
+},
+        payment: {
+          method: paymentMethod, // 'cash' or 'card'
+          status: 'pending',
+          transactionId: null
+        },
+        pricing: {
+          subtotal,
+          tax,
+          serviceCharge,
+          discount: 0,
+          total,
+          currency: cartItems[0]?.pricing?.currency || 'INR'
+        },
+        staff: {
+          cashierId: user.uid,
+          cashierName: user.displayName || 'Staff',
+          kitchenAssignedTo: null,
+          servedBy: null
+        },
         status: 'pending',
-        transactionId: null
-      },
-      pricing: {
-        subtotal,
-        tax,
-        serviceCharge,
-        discount: 0,
-        total,
-        currency: cartItems[0]?.pricing?.currency || 'INR'
-      },
-      staff: {
-        cashierId: user.uid,
-        cashierName: user.displayName || 'Staff',
-        kitchenAssignedTo: null,
-        servedBy: null
-      },
-      status: 'pending',
-      type: 'dine_in', // You should get this from user input
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+        type: 'dine_in', // or 'takeaway'/etc. Another input if needed
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
 
-    // Clear cart and navigate to order confirmation
-    setCartItems([]);
-    navigation.replace('OrderConfirmation', { orderId: orderRef.id });
-  } catch (error) {
-    console.error("Error processing order:", error);
-    Alert.alert("Error", "Failed to process order. Please try again.");
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-  } finally {
-    setIsProcessing(false);
-  }
-};
+      // Clear cart and navigate
+      setCartItems([]);
+      navigation.replace('OrderConfirmation', { orderId: orderRef.id });
+    } catch (error) {
+      console.error("Error processing order:", error);
+      Alert.alert("Error", "Failed to process order. Please try again.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const confirmClearCart = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    Haptics.selectionAsync(Haptics.NotificationFeedbackType.Warning);
     Alert.alert(
       "Clear Cart",
       "Are you sure you want to remove all items from your cart?",
@@ -195,6 +209,7 @@ const processOrder = async () => {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
+          {/* Header */}
           <View style={styles.header}>
             <IconButton
               icon="arrow-left"
@@ -202,7 +217,7 @@ const processOrder = async () => {
               onPress={() => navigation.goBack()}
               color={Palette.primary}
             />
-            <Text style={styles.title}>Your Order</Text>
+            <Text style={styles.title}>Create Order</Text>
             {cartItems.length > 0 && (
               <IconButton
                 icon="trash-can-outline"
@@ -213,10 +228,11 @@ const processOrder = async () => {
             )}
           </View>
 
+          {/* Cart empty state */}
           {cartItems.length === 0 ? (
             <View style={styles.emptyCart}>
               <Icon name="cart-remove" size={60} color={Palette.textMuted} />
-              <Text style={styles.emptyText}>Your cart is empty</Text>
+              <Text style={styles.emptyText}>No items in the cart</Text>
               <Button
                 mode="contained"
                 onPress={() => navigation.navigate('MenuCategories')}
@@ -228,6 +244,7 @@ const processOrder = async () => {
             </View>
           ) : (
             <>
+              {/* List of items in cart */}
               {cartItems.map((item, index) => (
                 <View key={`${item.id}-${index}`} style={styles.itemContainer}>
                   <View style={styles.itemHeader}>
@@ -235,12 +252,15 @@ const processOrder = async () => {
                       {item.basicInfo.name}
                     </Text>
                     <Text style={styles.itemPrice}>
-                      {item.pricing.basePrice + (item.customizations?.size?.price || 0) + 
-                       (item.customizations?.options?.reduce((sum, opt) => sum + (opt.price || 0), 0))} 
+                      {item.pricing.basePrice 
+                        + (item.customizations?.size?.price || 0)
+                        + (item.customizations?.options?.reduce((s, opt) => s + (opt.price || 0), 0) || 0)
+                      } 
                       {item.pricing.currency}
                     </Text>
                   </View>
 
+                  {/* Size */}
                   {item.customizations?.size && (
                     <View style={styles.customizationRow}>
                       <Text style={styles.customizationLabel}>Size:</Text>
@@ -250,19 +270,22 @@ const processOrder = async () => {
                     </View>
                   )}
 
+                  {/* Options */}
                   {item.customizations?.options?.length > 0 && (
                     <View style={styles.customizationRow}>
                       <Text style={styles.customizationLabel}>Options:</Text>
                       <View style={styles.customizationOptions}>
                         {item.customizations.options.map((opt, i) => (
                           <Chip key={i} style={styles.customizationChip}>
-                            {opt.name} {opt.price > 0 ? `(+${opt.price})` : ''}
+                            {opt.name}
+                            {opt.price > 0 ? ` (+${opt.price})` : ''}
                           </Chip>
                         ))}
                       </View>
                     </View>
                   )}
 
+                  {/* Notes */}
                   {item.notes && (
                     <View style={styles.notesRow}>
                       <Text style={styles.notesLabel}>Notes:</Text>
@@ -270,6 +293,7 @@ const processOrder = async () => {
                     </View>
                   )}
 
+                  {/* Edit/Remove Buttons */}
                   <View style={styles.itemActions}>
                     <Button
                       mode="text"
@@ -293,6 +317,7 @@ const processOrder = async () => {
                 </View>
               ))}
 
+              {/* Order Totals */}
               <View style={styles.summaryContainer}>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Subtotal:</Text>
@@ -314,9 +339,67 @@ const processOrder = async () => {
               </View>
             </>
           )}
+
+          {/* 
+             STAFF-ENTERED CUSTOMER + TABLE INFO 
+             (only shown if we have items in the cart)
+          */}
+          {cartItems.length > 0 && (
+            <View style={styles.customerSection}>
+              <Text style={styles.sectionTitle}>Customer Info</Text>
+              <TextInput
+                placeholder="Customer Name"
+                value={customerName}
+                onChangeText={setCustomerName}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Customer Phone"
+                value={customerPhone}
+                onChangeText={setCustomerPhone}
+                keyboardType="phone-pad"
+                style={styles.input}
+              />
+
+              <Text style={styles.sectionTitle}>Table + Guests</Text>
+              <TextInput
+                placeholder="Table Number"
+                value={tableNumber}
+                onChangeText={setTableNumber}
+                keyboardType="number-pad"
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Number of Guests"
+                value={numberOfGuests}
+                onChangeText={setNumberOfGuests}
+                keyboardType="number-pad"
+                style={styles.input}
+              />
+
+              <Text style={styles.sectionTitle}>Payment Method</Text>
+              <View style={styles.paymentMethodRow}>
+                <Button
+                  mode={paymentMethod === 'cash' ? 'contained' : 'outlined'}
+                  onPress={() => setPaymentMethod('cash')}
+                  style={styles.paymentButton}
+                >
+                  Cash
+                </Button>
+                <Button
+                  mode={paymentMethod === 'card' ? 'contained' : 'outlined'}
+                  onPress={() => setPaymentMethod('card')}
+                  style={styles.paymentButton}
+                >
+                  Card
+                </Button>
+              </View>
+            </View>
+          )}
         </Animated.View>
       </ScrollView>
 
+      {/* Footer with "Process Order" button */}
       {cartItems.length > 0 && (
         <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
           <Button
@@ -494,6 +577,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Palette.primary,
   },
+  customerSection: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: Palette.surface,
+    borderRadius: 12,
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: Palette.text,
+  },
+  input: {
+    backgroundColor: Palette.surfaceVariant,
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+    color: Palette.text,
+  },
+  paymentMethodRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  paymentButton: {
+    flex: 1,
+    marginRight: 8,
+  },
   footer: {
     position: 'absolute',
     bottom: 0,
@@ -515,3 +626,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+  
