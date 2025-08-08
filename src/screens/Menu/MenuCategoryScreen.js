@@ -13,9 +13,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Palette } from '../../theme/colors';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
-
 const { width } = Dimensions.get('window');
-
 export default function MenuCategoryScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);

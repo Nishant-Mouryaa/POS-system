@@ -1,4 +1,4 @@
-// CartScreen.js
+// CartScreen.js - Fixed version with proper CartContext integration
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -8,7 +8,7 @@ import {
   Dimensions,
   Animated,
   Alert,
-  TextInput // <-- Import TextInput from react-native
+  TextInput
 } from 'react-native';
 import { 
   Text, 
@@ -23,20 +23,20 @@ import { Palette } from '../../theme/colors';
 import { db, auth } from '../../config/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import * as Haptics from 'expo-haptics';
+import { useCart } from '../../context/CartContext'; // Import useCart hook
 
 const { width, height } = Dimensions.get('window');
 
 export default function CartScreen({ navigation, route }) {
-  const { items: initialItems } = route.params || {};
-  const [cartItems, setCartItems] = useState(initialItems || []);
-
+  // Use the CartContext instead of local state
+  const { cartItems, clearCart, removeFromCart, removeByIndex, getCartTotals } = useCart();
+  
   // Local state for the staff's inputs:
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [numberOfGuests, setNumberOfGuests] = useState('1');
   const [tableNumber, setTableNumber] = useState('1');
   const [paymentMethod, setPaymentMethod] = useState('cash');
-
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Animations
@@ -58,34 +58,23 @@ export default function CartScreen({ navigation, route }) {
     ]).start();
   }, []);
 
-  // Calculate totals
-  const subtotal = cartItems.reduce((sum, item) => {
-    const basePrice = item.pricing?.basePrice || 0;
-    const sizePrice = item.customizations?.size?.price || 0;
-    const customizationsPrice = item.customizations?.options?.reduce((s, opt) => s + (opt.price || 0), 0) || 0;
-    return sum + basePrice + sizePrice + customizationsPrice;
-  }, 0);
-
-  const tax = subtotal * 0.18; // 18% tax
-  const serviceCharge = subtotal * 0.10; // 10% service charge
-  const total = subtotal + tax + serviceCharge;
+  // Get totals from CartContext
+  const { subtotal, tax, serviceCharge, total } = getCartTotals();
 
   const removeItem = (index) => {
     Haptics.selectionAsync();
-    const newItems = [...cartItems];
-    newItems.splice(index, 1);
-    setCartItems(newItems);
-  };
-
-  const updateItem = (index, updatedItem) => {
-    const newItems = [...cartItems];
-    newItems[index] = updatedItem;
-    setCartItems(newItems);
+    // Use the cart item's unique ID for removal
+    const itemToRemove = cartItems[index];
+    if (itemToRemove.cartItemId) {
+      removeFromCart(itemToRemove.cartItemId);
+    } else {
+      // Fallback: remove by index
+      removeByIndex(index);
+    }
   };
 
   const handleEditItem = (index) => {
     Haptics.selectionAsync();
-    // Instead of passing a function, navigate with item data and use a callback pattern
     navigation.navigate('ItemDetail', {
       itemId: cartItems[index].id,
       cafeId: cartItems[index].cafeId,
@@ -99,21 +88,10 @@ export default function CartScreen({ navigation, route }) {
     });
   };
 
-  // Listen for navigation state to handle edit returns
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      // Check if we're returning from an edit
-      if (route.params?.editedItem && route.params?.editIndex !== undefined) {
-        updateItem(route.params.editIndex, route.params.editedItem);
-        // Clear the params to prevent re-processing
-        navigation.setParams({ editedItem: null, editIndex: null });
-      }
-    });
-
-    return unsubscribe;
-  }, [navigation, route.params]);
-
   const processOrder = async () => {
+    // Prevent multiple simultaneous calls
+    if (isProcessing) return;
+    
     try {
       setIsProcessing(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -125,16 +103,15 @@ export default function CartScreen({ navigation, route }) {
       const cafeId = cartItems[0]?.cafeId;
       if (!cafeId) throw new Error('No cafe ID found');
 
-      // Prepare items
-      const items = cartItems.map((item, index) => ({
+      // Prepare items - create a snapshot to avoid reference issues
+      const itemsSnapshot = [...cartItems];
+      const items = itemsSnapshot.map((item, index) => ({
         itemId: item.id,
-        name: item.basicInfo.name,
+        name: item.basicInfo?.name || item.name,
         quantity: item.quantity || 1,
-        unitPrice: item.pricing.basePrice,
-        totalPrice: item.pricing.basePrice 
-          + (item.customizations?.size?.price || 0) 
-          + (item.customizations?.options?.reduce((sum, opt) => sum + (opt.price || 0), 0) || 0),
-        notes: item.customizations?.notes || '',
+        unitPrice: item.pricing?.basePrice || item.price || 0,
+        totalPrice: item.totalPrice || (item.pricing?.basePrice || item.price || 0),
+        notes: item.customizations?.notes || item.notes || '',
         customizations: [
           ...(item.customizations?.size ? [{
             customizationId: `size_${item.customizations.size.name.toLowerCase().replace(/\s+/g, '_')}`,
@@ -150,6 +127,9 @@ export default function CartScreen({ navigation, route }) {
           })) || [])
         ]
       }));
+
+      // Get totals snapshot
+      const totalsSnapshot = getCartTotals();
 
       const orderRef = await addDoc(collection(db, 'orders'), {
         cafeId,
@@ -178,12 +158,12 @@ export default function CartScreen({ navigation, route }) {
           transactionId: null
         },
         pricing: {
-          subtotal,
-          tax,
-          serviceCharge,
+          subtotal: totalsSnapshot.subtotal,
+          tax: totalsSnapshot.tax,
+          serviceCharge: totalsSnapshot.serviceCharge,
           discount: 0,
-          total,
-          currency: cartItems[0]?.pricing?.currency || 'INR'
+          total: totalsSnapshot.total,
+          currency: itemsSnapshot[0]?.pricing?.currency || 'INR'
         },
         staff: {
           cashierId: user.uid,
@@ -197,8 +177,10 @@ export default function CartScreen({ navigation, route }) {
         updatedAt: serverTimestamp()
       });
 
-      // Clear cart and navigate
-      setCartItems([]);
+      // Clear cart using CartContext method
+      clearCart();
+      
+      // Navigate after successful order creation
       navigation.replace('OrderConfirmation', { orderId: orderRef.id });
     } catch (error) {
       console.error("Error processing order:", error);
@@ -216,7 +198,13 @@ export default function CartScreen({ navigation, route }) {
       "Are you sure you want to remove all items from your cart?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Clear", onPress: () => setCartItems([]) }
+        { 
+          text: "Clear", 
+          onPress: () => {
+            clearCart(); // Use CartContext method
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+        }
       ]
     );
   };
@@ -264,77 +252,93 @@ export default function CartScreen({ navigation, route }) {
           ) : (
             <>
               {/* List of items in cart */}
-              {cartItems.map((item, index) => (
-                <View key={`cart-item-${item.id}-${index}`} style={styles.itemContainer}>
-                  <View style={styles.itemHeader}>
-                    <Text style={styles.itemName} numberOfLines={1}>
-                      {item.basicInfo.name}
-                    </Text>
-                    <Text style={styles.itemPrice}>
-                      {item.pricing.basePrice 
-                        + (item.customizations?.size?.price || 0)
-                        + (item.customizations?.options?.reduce((s, opt) => s + (opt.price || 0), 0) || 0)
-                      } 
-                      {item.pricing.currency}
-                    </Text>
-                  </View>
+              {cartItems.map((item, index) => {
+                // Calculate item total price
+                const itemTotal = item.totalPrice || 
+                  (item.pricing?.basePrice || item.price || 0) + 
+                  (item.customizations?.size?.price || 0) +
+                  (item.customizations?.options?.reduce((s, opt) => s + (opt.price || 0), 0) || 0);
 
-                  {/* Size */}
-                  {item.customizations?.size && (
-                    <View style={styles.customizationRow}>
-                      <Text style={styles.customizationLabel}>Size:</Text>
-                      <Chip style={styles.customizationChip}>
-                        {item.customizations.size.name} (+{item.customizations.size.price})
-                      </Chip>
+                return (
+                  <View key={`cart-item-${item.cartItemId || item.id}-${index}`} style={styles.itemContainer}>
+                    <View style={styles.itemHeader}>
+                      <Text style={styles.itemName} numberOfLines={1}>
+                        {item.basicInfo?.name || item.name}
+                      </Text>
+                      <Text style={styles.itemPrice}>
+                        {itemTotal.toFixed(2)} {item.pricing?.currency || 'INR'}
+                      </Text>
                     </View>
-                  )}
 
-                  {/* Options */}
-                  {item.customizations?.options?.length > 0 && (
-                    <View style={styles.customizationRow}>
-                      <Text style={styles.customizationLabel}>Options:</Text>
-                      <View style={styles.customizationOptions}>
-                        {item.customizations.options.map((opt, optIndex) => (
-                          <Chip key={`option-${index}-${optIndex}`} style={styles.customizationChip}>
-                            {opt.name}
-                            {opt.price > 0 ? ` (+${opt.price})` : ''}
-                          </Chip>
-                        ))}
+                    {/* Quantity */}
+                    {item.quantity > 1 && (
+                      <View style={styles.customizationRow}>
+                        <Text style={styles.customizationLabel}>Qty:</Text>
+                        <Chip style={styles.customizationChip}>
+                          {item.quantity}
+                        </Chip>
                       </View>
-                    </View>
-                  )}
+                    )}
 
-                  {/* Notes */}
-                  {item.customizations?.notes && (
-                    <View style={styles.notesRow}>
-                      <Text style={styles.notesLabel}>Notes:</Text>
-                      <Text style={styles.notesText}>{item.customizations.notes}</Text>
-                    </View>
-                  )}
+                    {/* Size */}
+                    {item.customizations?.size && (
+                      <View style={styles.customizationRow}>
+                        <Text style={styles.customizationLabel}>Size:</Text>
+                        <Chip style={styles.customizationChip}>
+                          {item.customizations.size.name} (+{item.customizations.size.price})
+                        </Chip>
+                      </View>
+                    )}
 
-                  {/* Edit/Remove Buttons */}
-                  <View style={styles.itemActions}>
-                    <Button
-                      mode="text"
-                      onPress={() => handleEditItem(index)}
-                      icon="pencil"
-                      labelStyle={styles.actionButtonText}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      mode="text"
-                      onPress={() => removeItem(index)}
-                      icon="delete"
-                      labelStyle={[styles.actionButtonText, { color: Palette.error }]}
-                    >
-                      Remove
-                    </Button>
+                    {/* Options */}
+                    {item.customizations?.options?.length > 0 && (
+                      <View style={styles.customizationRow}>
+                        <Text style={styles.customizationLabel}>Options:</Text>
+                        <View style={styles.customizationOptions}>
+                          {item.customizations.options.map((opt, optIndex) => (
+                            <Chip key={`option-${index}-${optIndex}`} style={styles.customizationChip}>
+                              {opt.name}
+                              {opt.price > 0 ? ` (+${opt.price})` : ''}
+                            </Chip>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Notes */}
+                    {(item.customizations?.notes || item.notes) && (
+                      <View style={styles.notesRow}>
+                        <Text style={styles.notesLabel}>Notes:</Text>
+                        <Text style={styles.notesText}>
+                          {item.customizations?.notes || item.notes}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Edit/Remove Buttons */}
+                    <View style={styles.itemActions}>
+                      <Button
+                        mode="text"
+                        onPress={() => handleEditItem(index)}
+                        icon="pencil"
+                        labelStyle={styles.actionButtonText}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        mode="text"
+                        onPress={() => removeItem(index)}
+                        icon="delete"
+                        labelStyle={[styles.actionButtonText, { color: Palette.error }]}
+                      >
+                        Remove
+                      </Button>
+                    </View>
+
+                    {index < cartItems.length - 1 && <Divider style={styles.divider} />}
                   </View>
-
-                  {index < cartItems.length - 1 && <Divider style={styles.divider} />}
-                </View>
-              ))}
+                );
+              })}
 
               {/* Order Totals */}
               <View style={styles.summaryContainer}>

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { 
   StyleSheet, 
@@ -19,7 +18,7 @@ import { db } from '../../config/firebase';
 import { Palette } from '../../theme/colors';
 // Your local components:
 import Sidebar from '../../navigation/Sidebar';
-import BackgroundWrapper from '../../components/BackgroundWrapper';
+
 import POSMenuButton from '../../components/pos/POSMenuButton';
 import POSUserHeader from '../../components/pos/POSUserHeader';
 import POSStatsCard from '../../components/pos/POSStatsCard';
@@ -43,6 +42,9 @@ const POSScreen = ({ navigation, route }) => {
   const [shiftData, setShiftData] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
+  // Add loading state to prevent multiple concurrent fetches
+  const [isInitializing, setIsInitializing] = useState(false);
+
   // Animations
   const fadeAnim        = useRef(new Animated.Value(0)).current;
   const scaleAnim       = useRef(new Animated.Value(0.9)).current;
@@ -54,65 +56,8 @@ const POSScreen = ({ navigation, route }) => {
   const pulseAnim       = useRef(new Animated.Value(1)).current;
   const menuButtonScale = useRef(new Animated.Value(1)).current;
 
-  // Refresh data once on mount.
-  useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData]);
-
-  // Consolidated data fetching function
-  const fetchAllData = useCallback(async () => {
-    try {
-      // Must be signed in
-      const user = auth.currentUser;
-      if (!user) {
-        navigation.navigate('Auth');
-        return;
-      }
-
-      setStatsLoading(true);
-      setLoadingOrders(true);
-
-      // 1) Fetch user doc
-      const userRef = doc(db, 'users', user.uid);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) {
-        throw new Error('User document not found');
-      }
-
-      const uData = userSnap.data();
-      setUserData(uData);
-      setIsManager(uData.employment?.role === 'manager');
-
-      // 2) Make sure user has a valid cafeId
-      if (!uData.cafeId || typeof uData.cafeId !== 'string') {
-        throw new Error('User is not associated with a valid cafe');
-      }
-
-      // 3) If there's a shiftId, fetch shift doc
-      if (route.params?.shiftId) {
-        const shiftRef = doc(db, 'shifts', route.params.shiftId);
-        const shiftSnap = await getDoc(shiftRef);
-        if (shiftSnap.exists()) {
-          setShiftData(shiftSnap.data());
-        }
-      }
-
-      // 4) Fetch stats & recent orders in parallel
-      await Promise.all([
-        fetchStats(uData.cafeId),
-        fetchRecentOrders(uData.cafeId)
-      ]);
-    } catch (error) {
-      console.error("Error in fetchAllData:", error);
-      Alert.alert("Error", error.message || "Failed to load data");
-    } finally {
-      setStatsLoading(false);
-      setLoadingOrders(false);
-    }
-  }, [navigation, route.params?.shiftId]);
-
-  // Fetch stats
-  const fetchStats = async (cafeId) => {
+  // Fetch stats - now stable with useCallback
+  const fetchStats = useCallback(async (cafeId) => {
     try {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -156,10 +101,10 @@ const POSScreen = ({ navigation, route }) => {
       console.error('Error fetching stats:', error);
       throw error; // Rethrow so fetchAllData catch can handle it if desired
     }
-  };
+  }, []); // No dependencies - this function doesn't depend on any state
 
-  // Fetch recent orders
-  const fetchRecentOrders = async (cafeId) => {
+  // Fetch recent orders - now stable with useCallback
+  const fetchRecentOrders = useCallback(async (cafeId) => {
     try {
       console.log('Fetching orders for cafe:', cafeId);
 
@@ -199,7 +144,73 @@ const POSScreen = ({ navigation, route }) => {
       });
       throw error;
     }
-  };
+  }, []); // No dependencies
+
+  // FIXED: Remove circular dependency by not including fetchAllData in its own dependencies
+  const fetchAllData = useCallback(async () => {
+    try {
+      // Prevent multiple concurrent fetches
+      if (isInitializing) return;
+      
+      // Must be signed in
+      const user = auth.currentUser;
+      if (!user) {
+        navigation.navigate('Auth');
+        return;
+      }
+
+      setIsInitializing(true);
+      setStatsLoading(true);
+      setLoadingOrders(true);
+
+      console.log('Fetching user data for UID:', user.uid);
+
+      // 1) Fetch user doc
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        throw new Error('User document not found');
+      }
+
+      const uData = userSnap.data();
+      console.log('User data found, cafeId:', uData.cafeId);
+      
+      setUserData(uData);
+      setIsManager(uData.employment?.role === 'manager');
+
+      // 2) Make sure user has a valid cafeId
+      if (!uData.cafeId || typeof uData.cafeId !== 'string') {
+        throw new Error('User is not associated with a valid cafe');
+      }
+
+      // 3) If there's a shiftId, fetch shift doc
+      if (route.params?.shiftId) {
+        const shiftRef = doc(db, 'shifts', route.params.shiftId);
+        const shiftSnap = await getDoc(shiftRef);
+        if (shiftSnap.exists()) {
+          setShiftData(shiftSnap.data());
+        }
+      }
+
+      // 4) Fetch stats & recent orders in parallel
+      await Promise.all([
+        fetchStats(uData.cafeId),
+        fetchRecentOrders(uData.cafeId)
+      ]);
+    } catch (error) {
+      console.error("Error processing order:", error);
+      Alert.alert("Error", error.message || "Failed to load data");
+    } finally {
+      setStatsLoading(false);
+      setLoadingOrders(false);
+      setIsInitializing(false);
+    }
+  }, [navigation, route.params?.shiftId, fetchStats, fetchRecentOrders, isInitializing]); // Now includes stable dependencies
+
+  // FIXED: Only run once on mount or when shiftId changes
+  useEffect(() => {
+    fetchAllData();
+  }, [route.params?.shiftId]); // Remove fetchAllData from dependencies
 
   // Start animations on mount
   useEffect(() => {
@@ -236,7 +247,7 @@ const POSScreen = ({ navigation, route }) => {
       }),
     ]).start();
 
-    // Stagger the “featureAnimations”
+    // Stagger the "featureAnimations"
     Animated.stagger(
       100, 
       featureAnimations.map(anim =>
@@ -265,8 +276,8 @@ const POSScreen = ({ navigation, route }) => {
     ).start();
   }, []);
 
-  // Format “time ago” helper
-  const formatTimeAgo = (date) => {
+  // Format "time ago" helper
+  const formatTimeAgo = useCallback((date) => {
     const now = new Date();
     const diffMs = now - date;
     const diffMinutes = Math.floor(diffMs / 60000);
@@ -279,10 +290,10 @@ const POSScreen = ({ navigation, route }) => {
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
-  };
+  }, []);
 
   // Status color
-  const getStatusColor = (status) => {
+  const getStatusColor = useCallback((status) => {
     switch (status) {
       case 'completed':
         return Palette.success;
@@ -295,10 +306,10 @@ const POSScreen = ({ navigation, route }) => {
       default:
         return Palette.primary;
     }
-  };
+  }, []);
 
   // Status icon
-  const getStatusIcon = (status) => {
+  const getStatusIcon = useCallback((status) => {
     switch (status) {
       case 'completed':
         return 'check-circle';
@@ -311,10 +322,10 @@ const POSScreen = ({ navigation, route }) => {
       default:
         return 'receipt';
     }
-  };
+  }, []);
 
-  // Quick actions for the POS
-  const quickActions = [
+  // Quick actions for the POS - memoize to prevent recreating
+  const quickActions = React.useMemo(() => [
     {
       icon: 'point-of-sale',
       title: 'New Order',
@@ -335,18 +346,18 @@ const POSScreen = ({ navigation, route }) => {
       title: 'Customers',
       onPress: () => navigation.navigate('Customers'),
     },
-  ];
+  ], [navigation]);
 
   // Tap on a recent order
-  const handleOrderPress = (order) => {
+  const handleOrderPress = useCallback((order) => {
     Haptics.selectionAsync();
     navigation.navigate('OrderDetail', { orderId: order.id });
-  };
+  }, [navigation]);
 
   // Manager tools callback
-  const handleDashboardPress = (tab) => {
+  const handleDashboardPress = useCallback((tab) => {
     navigation.navigate('Manager', { screen: tab || 'Dashboard' });
-  };
+  }, [navigation]);
 
   return (
     <View style={styles.screenContainer}>
@@ -697,12 +708,11 @@ const makeStyles = (colors) =>
       shadowOpacity: 0.3,
       shadowRadius: 8,
       elevation: 5,
-    },
+    }, 
     emptyActivityButtonText: {
       color: Palette.textOnPrimary,
       fontSize: 14,
       fontWeight: '600',
     },
   });
-
 export default POSScreen;
