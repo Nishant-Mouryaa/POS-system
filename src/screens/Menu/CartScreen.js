@@ -1,4 +1,3 @@
-
 // CartScreen.js
 import React, { useState, useEffect } from 'react';
 import {
@@ -25,14 +24,13 @@ import { db, auth } from '../../config/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import * as Haptics from 'expo-haptics';
 
-
 const { width, height } = Dimensions.get('window');
 
 export default function CartScreen({ navigation, route }) {
   const { items: initialItems } = route.params || {};
   const [cartItems, setCartItems] = useState(initialItems || []);
 
-  // Local state for the staff’s inputs:
+  // Local state for the staff's inputs:
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [numberOfGuests, setNumberOfGuests] = useState('1');
@@ -87,11 +85,33 @@ export default function CartScreen({ navigation, route }) {
 
   const handleEditItem = (index) => {
     Haptics.selectionAsync();
+    // Instead of passing a function, navigate with item data and use a callback pattern
     navigation.navigate('ItemDetail', {
-      item: cartItems[index],
-      onSave: (updatedItem) => updateItem(index, updatedItem)
+      itemId: cartItems[index].id,
+      cafeId: cartItems[index].cafeId,
+      editMode: true,
+      editIndex: index,
+      existingData: {
+        customizations: cartItems[index].customizations,
+        quantity: cartItems[index].quantity,
+        notes: cartItems[index].notes
+      }
     });
   };
+
+  // Listen for navigation state to handle edit returns
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      // Check if we're returning from an edit
+      if (route.params?.editedItem && route.params?.editIndex !== undefined) {
+        updateItem(route.params.editIndex, route.params.editedItem);
+        // Clear the params to prevent re-processing
+        navigation.setParams({ editedItem: null, editIndex: null });
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, route.params]);
 
   const processOrder = async () => {
     try {
@@ -106,15 +126,15 @@ export default function CartScreen({ navigation, route }) {
       if (!cafeId) throw new Error('No cafe ID found');
 
       // Prepare items
-      const items = cartItems.map(item => ({
+      const items = cartItems.map((item, index) => ({
         itemId: item.id,
         name: item.basicInfo.name,
-        quantity: 1, // or a quantity field if you have it
+        quantity: item.quantity || 1,
         unitPrice: item.pricing.basePrice,
         totalPrice: item.pricing.basePrice 
           + (item.customizations?.size?.price || 0) 
           + (item.customizations?.options?.reduce((sum, opt) => sum + (opt.price || 0), 0) || 0),
-        notes: item.notes || '',
+        notes: item.customizations?.notes || '',
         customizations: [
           ...(item.customizations?.size ? [{
             customizationId: `size_${item.customizations.size.name.toLowerCase().replace(/\s+/g, '_')}`,
@@ -122,8 +142,8 @@ export default function CartScreen({ navigation, route }) {
             price: item.customizations.size.price,
             selectedOption: item.customizations.size.name
           }] : []),
-          ...(item.customizations?.options?.map(opt => ({
-            customizationId: `opt_${opt.name.toLowerCase().replace(/\s+/g, '_')}`,
+          ...(item.customizations?.options?.map((opt, optIndex) => ({
+            customizationId: `opt_${opt.name.toLowerCase().replace(/\s+/g, '_')}_${optIndex}`,
             name: opt.name,
             price: opt.price,
             selectedOption: opt.name
@@ -134,10 +154,9 @@ export default function CartScreen({ navigation, route }) {
       const orderRef = await addDoc(collection(db, 'orders'), {
         cafeId,
         customer: {
-          // Use the staff-entered values here:
-          customerId: '', // For a walk-in customer, leave blank or generate your own
+          customerId: '',
           name: customerName || 'Guest',
-          email: '',      // If the staff doesn't know the email, leave it blank
+          email: '',
           phone: customerPhone,
           loyaltyNumber: ''
         },
@@ -147,14 +166,14 @@ export default function CartScreen({ navigation, route }) {
           specialRequests: '' 
         },
         items,
-     orderFlow: {
-  orderedAt: serverTimestamp(),
-  estimatedReadyTime: null,
-  completedAt: null,
-  orderNumber: `ORD-${new Date().toISOString().replace(/[^0-9]/g, '').slice(-12)}`
-},
+        orderFlow: {
+          orderedAt: serverTimestamp(),
+          estimatedReadyTime: null,
+          completedAt: null,
+          orderNumber: `ORD-${new Date().toISOString().replace(/[^0-9]/g, '').slice(-12)}`
+        },
         payment: {
-          method: paymentMethod, // 'cash' or 'card'
+          method: paymentMethod,
           status: 'pending',
           transactionId: null
         },
@@ -173,7 +192,7 @@ export default function CartScreen({ navigation, route }) {
           servedBy: null
         },
         status: 'pending',
-        type: 'dine_in', // or 'takeaway'/etc. Another input if needed
+        type: 'dine_in',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -246,7 +265,7 @@ export default function CartScreen({ navigation, route }) {
             <>
               {/* List of items in cart */}
               {cartItems.map((item, index) => (
-                <View key={`${item.id}-${index}`} style={styles.itemContainer}>
+                <View key={`cart-item-${item.id}-${index}`} style={styles.itemContainer}>
                   <View style={styles.itemHeader}>
                     <Text style={styles.itemName} numberOfLines={1}>
                       {item.basicInfo.name}
@@ -275,8 +294,8 @@ export default function CartScreen({ navigation, route }) {
                     <View style={styles.customizationRow}>
                       <Text style={styles.customizationLabel}>Options:</Text>
                       <View style={styles.customizationOptions}>
-                        {item.customizations.options.map((opt, i) => (
-                          <Chip key={i} style={styles.customizationChip}>
+                        {item.customizations.options.map((opt, optIndex) => (
+                          <Chip key={`option-${index}-${optIndex}`} style={styles.customizationChip}>
                             {opt.name}
                             {opt.price > 0 ? ` (+${opt.price})` : ''}
                           </Chip>
@@ -286,10 +305,10 @@ export default function CartScreen({ navigation, route }) {
                   )}
 
                   {/* Notes */}
-                  {item.notes && (
+                  {item.customizations?.notes && (
                     <View style={styles.notesRow}>
                       <Text style={styles.notesLabel}>Notes:</Text>
-                      <Text style={styles.notesText}>{item.notes}</Text>
+                      <Text style={styles.notesText}>{item.customizations.notes}</Text>
                     </View>
                   )}
 
@@ -340,43 +359,9 @@ export default function CartScreen({ navigation, route }) {
             </>
           )}
 
-          {/* 
-             STAFF-ENTERED CUSTOMER + TABLE INFO 
-             (only shown if we have items in the cart)
-          */}
+          {/* Staff-entered customer + table info */}
           {cartItems.length > 0 && (
             <View style={styles.customerSection}>
-              <Text style={styles.sectionTitle}>Customer Info</Text>
-              <TextInput
-                placeholder="Customer Name"
-                value={customerName}
-                onChangeText={setCustomerName}
-                style={styles.input}
-              />
-              <TextInput
-                placeholder="Customer Phone"
-                value={customerPhone}
-                onChangeText={setCustomerPhone}
-                keyboardType="phone-pad"
-                style={styles.input}
-              />
-
-              <Text style={styles.sectionTitle}>Table + Guests</Text>
-              <TextInput
-                placeholder="Table Number"
-                value={tableNumber}
-                onChangeText={setTableNumber}
-                keyboardType="number-pad"
-                style={styles.input}
-              />
-              <TextInput
-                placeholder="Number of Guests"
-                value={numberOfGuests}
-                onChangeText={setNumberOfGuests}
-                keyboardType="number-pad"
-                style={styles.input}
-              />
-
               <Text style={styles.sectionTitle}>Payment Method</Text>
               <View style={styles.paymentMethodRow}>
                 <Button
@@ -603,7 +588,7 @@ const styles = StyleSheet.create({
   },
   paymentButton: {
     flex: 1,
-    marginRight: 8,
+    marginHorizontal: 4,
   },
   footer: {
     position: 'absolute',
@@ -626,4 +611,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-  

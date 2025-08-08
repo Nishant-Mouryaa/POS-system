@@ -71,12 +71,15 @@ export default function MenuItemsScreen({ navigation, route }) {
     navigation.setOptions({
       title: categoryName,
       headerRight: () => (
-        <View style={styles.cartIndicator}>
+        <TouchableOpacity 
+          style={styles.cartIndicator}
+          onPress={viewCart}
+        >
           <Icon name="cart" size={24} color={Palette.primary} />
           {cartItems.length > 0 && (
             <Badge style={styles.badge}>{cartItems.length}</Badge>
           )}
-        </View>
+        </TouchableOpacity>
       )
     });
   }, [categoryName, cartItems]);
@@ -126,7 +129,7 @@ export default function MenuItemsScreen({ navigation, route }) {
         {menuItems.length > 0 ? (
           menuItems.map((item) => (
             <TouchableOpacity
-              key={item.id}
+              key={`menu-item-${item.id}`}
               style={styles.itemCard}
               onPress={() => handleItemPress(item)}
               activeOpacity={0.8}
@@ -306,6 +309,7 @@ const styles = StyleSheet.create({
   cartIndicator: {
     marginRight: 16,
     position: 'relative',
+    padding: 8, // Added padding for better touch target
   },
   badge: {
     position: 'absolute',
