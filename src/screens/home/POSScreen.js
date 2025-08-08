@@ -1,5 +1,4 @@
 
-// POSScreen.js
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { 
   StyleSheet, 

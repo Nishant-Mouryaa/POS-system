@@ -1,4 +1,3 @@
-// BottomTabNavigator.tsx
 import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
@@ -17,16 +16,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import POSScreen from '../screens/home/POSScreen';
-import { Palette } from '../theme/colors';
+import { ComponentColors, Palette } from '../theme/colors';
 import MenuCategoryScreen from '../screens/Menu/MenuCategoryScreen';
 import OrderManagementScreen from '../screens/Order/OrderManagementScreen';
-
 const { width } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
 
-/* ------------------------------------------------------------------ */
-/* Icons                                                              */
-/* ------------------------------------------------------------------ */
 const TabBarIcon = ({ route, focused, color, size }) => {
   const scaleValue = React.useRef(new Animated.Value(1)).current;
 
@@ -39,53 +34,25 @@ const TabBarIcon = ({ route, focused, color, size }) => {
     }).start();
   }, [focused]);
 
-  const iconSize = focused ? size + 2 : size;
-
   const iconName = {
-    Home:       focused ? 'home'            : 'home-outline',
-    MenuCategoryScreen:  focused ? 'food-fork-drink' : 'food-outline',
+    Home: focused ? 'home' : 'home-outline',
+    MenuCategoryScreen: focused ? 'food-fork-drink' : 'food-outline',
     OrderManagementScreen: focused ? 'clipboard-text' : 'clipboard-text-outline',
     MessageCenter: focused ? 'message-outline' : 'message-outline',
   }[route.name];
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
-      <MaterialCommunityIcons name={iconName} size={iconSize} color={color} />
+      <MaterialCommunityIcons 
+        name={iconName} 
+        size={size} 
+        color={color} 
+      />
     </Animated.View>
   );
 };
 
-/* ------------------------------------------------------------------ */
-/* Floating “About” FAB                                               */
-/* ------------------------------------------------------------------ */
-const QuickAboutFAB = () => {
-  const navigation = useNavigation();
-  return (
-    <TouchableWithoutFeedback onPress={() => navigation.navigate('AboutUs')}>
-      <View
-        style={[
-          styles.fabContainer,
-          {
-            bottom: 100,
-            backgroundColor: Palette.bg,            // <-- use Palette
-          },
-        ]}
-      >
-        <MaterialCommunityIcons
-          name="information"
-          size={28}
-          color={Palette.primary}                   // <-- use Palette
-        />
-      </View>
-    </TouchableWithoutFeedback>
-  );
-};
-
-/* ------------------------------------------------------------------ */
-/* Floating “Quick Test” FAB                                          */
-/* ------------------------------------------------------------------ */
-const QuickTestFAB = () => {
-  const navigation = useNavigation();
+const QuickActionFAB = ({ icon, color, onPress, position = 'right' }) => {
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const rotateAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -104,42 +71,41 @@ const QuickTestFAB = () => {
     ]).start();
   };
 
-  const rotation = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '10deg'] });
+  const rotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', position === 'right' ? '10deg' : '-10deg']
+  });
 
   return (
     <TouchableWithoutFeedback
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        navigation.navigate('Tests');
-      }}
+      onPress={onPress}
     >
       <Animated.View
         style={[
           styles.fabContainer,
-          { transform: [{ scale: scaleAnim }, { rotate: rotation }] },
+          { 
+            [position]: 24,
+            backgroundColor: Palette.surface,
+            transform: [{ scale: scaleAnim }, { rotate: rotation }] 
+          },
         ]}
       >
-        <LinearGradient
-          colors={[Palette.primary, Palette.primaryLight]}     // <-- use Palette
-          style={styles.fabGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <MaterialCommunityIcons name="lightning-bolt" color={Palette.iconlight} size={28} />
-        </LinearGradient>
+        <MaterialCommunityIcons 
+          name={icon} 
+          size={28} 
+          color={color} 
+        />
       </Animated.View>
     </TouchableWithoutFeedback>
   );
 };
 
-/* ------------------------------------------------------------------ */
-/* Bottom Tab Navigator                                               */
-/* ------------------------------------------------------------------ */
 const BottomTabNavigator = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const auth = getAuth();
+  const navigation = useNavigation();
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -155,88 +121,90 @@ const BottomTabNavigator = () => {
 
   return (
     <>
-      {/* Optional extra FABs */}
-      
-      
+   
 
       <Tab.Navigator
         initialRouteName="POSScreen"
         screenOptions={({ route }) => ({
           headerShown: false,
-          tabBarIcon: ({ focused, size }) => (
+          tabBarIcon: ({ focused, color, size }) => (
             <TabBarIcon
               route={route}
               focused={focused}
               size={size}
-              color={focused ? Palette.primary : Palette.textMuted} // <-- use Palette
+              color={color}
             />
           ),
           tabBarLabelStyle: {
             fontSize: 12,
             fontFamily: 'Poppins-Medium',
-            marginBottom: 5,
+            marginBottom: Platform.select({ ios: 5, android: 2 }),
           },
           tabBarStyle: {
             position: 'absolute',
             bottom: 0,
-            left: 6,
-            right: 6,
-            backgroundColor: Palette.bg,              // <-- use Palette
+            left: 10,
+            right: 10,
+            backgroundColor: ComponentColors.navigation.background,
             borderTopWidth: 0,
-            height: 70,
+            height: Platform.select({ ios: 80, android: 70 }),
             borderRadius: 20,
-            shadowColor: Palette.shadow,              // <-- use Palette
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.2,
-            shadowRadius: 10,
+            borderWidth: 1,
+            borderColor: Palette.glassBorder,
+            shadowColor: Palette.shadowDark,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
             elevation: 5,
-            paddingBottom: 5,
+            paddingBottom: Platform.select({ ios: 10, android: 5 }),
             paddingTop: 5,
-            marginBottom: 10,
+            marginBottom: Platform.select({ ios: 10, android: 5 }),
           },
-          tabBarActiveTintColor: Palette.primary,     // <-- use Palette
-          tabBarInactiveTintColor: Palette.textMuted, // <-- use Palette
+          tabBarActiveTintColor: ComponentColors.navigation.activeTab,
+          tabBarInactiveTintColor: ComponentColors.navigation.inactiveTab,
           tabBarShowLabel: true,
           tabBarHideOnKeyboard: true,
         })}
       >
-        <Tab.Screen name="Home"      component={POSScreen}      options={{ tabBarLabel: 'Home' }} />
-        <Tab.Screen name="MenuCategoryScreen" component={MenuCategoryScreen} options={{ tabBarLabel: 'Menu' }} />
-        <Tab.Screen name="OrderManagementScreen"     component={OrderManagementScreen} options={{ tabBarLabel: 'Orders' }} />
-       
-        {/* If you want an Admin tab, add it conditionally but still coloured with Palette */}
-        {/* {isAdmin && <Tab.Screen name="Admin" component={AdminPanel} />} */}
-
-      
-
+        <Tab.Screen 
+          name="Home" 
+          component={POSScreen} 
+          options={{ tabBarLabel: 'POS' }} 
+        />
+        <Tab.Screen 
+          name="MenuCategoryScreen" 
+          component={MenuCategoryScreen} 
+          options={{ tabBarLabel: 'Menu' }} 
+        />
+        <Tab.Screen 
+          name="OrderManagementScreen" 
+          component={OrderManagementScreen} 
+          options={{ tabBarLabel: 'Orders' }} 
+        />
       </Tab.Navigator>
     </>
   );
 };
 
-/* ------------------------------------------------------------------ */
-/* Styles (only structural stuff lives here)                          */
-/* ------------------------------------------------------------------ */
 const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 100 : 85,
-    right: 24,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    bottom: Platform.select({ ios: 100, android: 85 }),
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Palette.shadow,         // <-- use Palette
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 10,
+    shadowColor: Palette.shadowDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
     zIndex: 10,
   },
   fabGradient: {
-    width: 60,
-    height: 60,
+    width: '100%',
+    height: '100%',
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
