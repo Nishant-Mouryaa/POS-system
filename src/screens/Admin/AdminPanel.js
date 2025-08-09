@@ -14,9 +14,7 @@ import { createMaterialBottomTabNavigator } from '@react-navigation/material-bot
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AdminPalette } from '../../theme/colors';
 import AdminOnly from '../../components/AdminOnly';
-import UserManagementScreen from './UserManagementScreen';
-import TestManagementScreen from './TestManagementScreen';
-import TextbookManagementScreen from './TextbookManagementScreen';
+
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../../config/firebase';
 import { collection, getDocs, onSnapshot, query, where } from 'firebase/firestore';
@@ -286,7 +284,7 @@ const AdminTabs = () => {
           tabBarIconStyle: styles.tabIcon,
         }}
       />
-      <Tab.Screen
+      {/* <Tab.Screen
         name="TextbookManagement"
         component={TextbookManagementScreen}
         options={{
@@ -300,8 +298,8 @@ const AdminTabs = () => {
           tabBarLabel: 'Textbooks',
           tabBarLabelStyle: styles.tabLabel,
         }}
-      />
-      <Tab.Screen
+      /> */}
+      {/* <Tab.Screen
         name="TestManagement"
         component={TestManagementScreen}
         options={{
@@ -330,7 +328,7 @@ const AdminTabs = () => {
           tabBarLabel: 'Users',
           tabBarLabelStyle: styles.tabLabel,
         }}
-      />
+      /> */}
     </Tab.Navigator>
   );
 };

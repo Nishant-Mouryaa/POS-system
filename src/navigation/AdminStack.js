@@ -2,9 +2,7 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Provider as PaperProvider } from 'react-native-paper';
 import AdminPanel from '../screens/Admin/AdminPanel';
-import UserManagementScreen from '../screens/Admin/UserManagementScreen';
-import TestManagement from '../screens/Admin/TestManagementScreen';
-import TextbookManagement from '../screens/Admin/TextbookManagementScreen';
+
 import { AdminPalette } from '../theme/colors';
 import { AdminDarkTheme } from '../theme'; // Optional custom theme if shaped for Paper
 
@@ -39,34 +37,9 @@ const AdminStack = () => {
           component={AdminPanel} 
           options={{ headerShown: false }}
         />
-        <Stack.Screen 
-          name="UserManagement" 
-          component={UserManagementScreen} 
-          options={{ 
-            title: 'User Management',
-            headerShown: true,
-            headerLeftContainerStyle: { paddingLeft: 16 },
-            
-          }}
-        />
-        <Stack.Screen 
-          name="TestManagement" 
-          component={TestManagement} 
-          options={{ 
-            title: 'Test Management',
-            headerShown: true,
-            headerLeftContainerStyle: { paddingLeft: 16 },
-          }}
-        />
-        <Stack.Screen 
-          name="TextbookManagement" 
-          component={TextbookManagement} 
-          options={{ 
-            title: 'Textbook Management',
-            headerShown: true,
-            headerLeftContainerStyle: { paddingLeft: 16 },
-          }}
-        />
+      
+     
+        
         
       </Stack.Navigator>
     </PaperProvider>
