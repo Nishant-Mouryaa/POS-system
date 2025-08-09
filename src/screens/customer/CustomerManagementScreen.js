@@ -215,14 +215,15 @@ const CustomerManagementScreen = () => {
     }
   };
 
-  const getTierColor = (tier) => {
-    switch (tier) {
-      case 'gold': return Palette.gold;
-      case 'silver': return Palette.silver;
-      case 'platinum': return Palette.platinum;
-      default: return Palette.primary;
-    }
-  };
+const getTierColor = (tier) => {
+  switch (tier) {
+    case 'gold': return '#FFD700';      // Gold color
+    case 'silver': return '#C0C0C0';    // Silver color  
+    case 'platinum': return '#E5E4E2';  // Platinum color
+    case 'bronze': return '#CD7F32';    // Bronze color
+    default: return Palette.primary || '#007AFF';  // Fallback color
+  }
+};
 
   const renderCustomerItem = ({ item }) => (
     <TouchableOpacity
@@ -993,5 +994,4 @@ const makeStyles = (colors) => StyleSheet.create({
     fontWeight: '600',
   },
 });
-
 export default CustomerManagementScreen;
