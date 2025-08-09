@@ -62,7 +62,6 @@ const POSStatsCard = ({ shiftData, statsCardScale, colors, styles, isLoading }) 
     }
     return formatIndianCurrency(value);
   };
-
   return (
     <Animated.View style={[styles.statsCard, { transform: [{ scale: statsCardScale }] }]}>
       {isLoading ? (

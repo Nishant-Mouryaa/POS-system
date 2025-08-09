@@ -1,4 +1,5 @@
-// CartScreen.js - Fixed version with proper CartContext integration
+
+// CartScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -8,7 +9,7 @@ import {
   Dimensions,
   Animated,
   Alert,
-  TextInput
+  TextInput // <-- Import TextInput from react-native
 } from 'react-native';
 import { 
   Text, 
@@ -23,20 +24,21 @@ import { Palette } from '../../theme/colors';
 import { db, auth } from '../../config/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import * as Haptics from 'expo-haptics';
-import { useCart } from '../../context/CartContext'; // Import useCart hook
+
 
 const { width, height } = Dimensions.get('window');
 
 export default function CartScreen({ navigation, route }) {
-  // Use the CartContext instead of local state
-  const { cartItems, clearCart, removeFromCart, removeByIndex, getCartTotals } = useCart();
-  
-  // Local state for the staff's inputs:
+  const { items: initialItems } = route.params || {};
+  const [cartItems, setCartItems] = useState(initialItems || []);
+
+  // Local state for the staff’s inputs:
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [numberOfGuests, setNumberOfGuests] = useState('1');
   const [tableNumber, setTableNumber] = useState('1');
   const [paymentMethod, setPaymentMethod] = useState('cash');
+
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Animations
@@ -58,40 +60,40 @@ export default function CartScreen({ navigation, route }) {
     ]).start();
   }, []);
 
-  // Get totals from CartContext
-  const { subtotal, tax, serviceCharge, total } = getCartTotals();
+  // Calculate totals
+  const subtotal = cartItems.reduce((sum, item) => {
+    const basePrice = item.pricing?.basePrice || 0;
+    const sizePrice = item.customizations?.size?.price || 0;
+    const customizationsPrice = item.customizations?.options?.reduce((s, opt) => s + (opt.price || 0), 0) || 0;
+    return sum + basePrice + sizePrice + customizationsPrice;
+  }, 0);
+
+  const tax = subtotal * 0.18; // 18% tax
+  const serviceCharge = subtotal * 0.10; // 10% service charge
+  const total = subtotal + tax + serviceCharge;
 
   const removeItem = (index) => {
     Haptics.selectionAsync();
-    // Use the cart item's unique ID for removal
-    const itemToRemove = cartItems[index];
-    if (itemToRemove.cartItemId) {
-      removeFromCart(itemToRemove.cartItemId);
-    } else {
-      // Fallback: remove by index
-      removeByIndex(index);
-    }
+    const newItems = [...cartItems];
+    newItems.splice(index, 1);
+    setCartItems(newItems);
+  };
+
+  const updateItem = (index, updatedItem) => {
+    const newItems = [...cartItems];
+    newItems[index] = updatedItem;
+    setCartItems(newItems);
   };
 
   const handleEditItem = (index) => {
     Haptics.selectionAsync();
     navigation.navigate('ItemDetail', {
-      itemId: cartItems[index].id,
-      cafeId: cartItems[index].cafeId,
-      editMode: true,
-      editIndex: index,
-      existingData: {
-        customizations: cartItems[index].customizations,
-        quantity: cartItems[index].quantity,
-        notes: cartItems[index].notes
-      }
+      item: cartItems[index],
+      onSave: (updatedItem) => updateItem(index, updatedItem)
     });
   };
 
   const processOrder = async () => {
-    // Prevent multiple simultaneous calls
-    if (isProcessing) return;
-    
     try {
       setIsProcessing(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -103,15 +105,16 @@ export default function CartScreen({ navigation, route }) {
       const cafeId = cartItems[0]?.cafeId;
       if (!cafeId) throw new Error('No cafe ID found');
 
-      // Prepare items - create a snapshot to avoid reference issues
-      const itemsSnapshot = [...cartItems];
-      const items = itemsSnapshot.map((item, index) => ({
+      // Prepare items
+      const items = cartItems.map(item => ({
         itemId: item.id,
-        name: item.basicInfo?.name || item.name,
-        quantity: item.quantity || 1,
-        unitPrice: item.pricing?.basePrice || item.price || 0,
-        totalPrice: item.totalPrice || (item.pricing?.basePrice || item.price || 0),
-        notes: item.customizations?.notes || item.notes || '',
+        name: item.basicInfo.name,
+        quantity: 1, // or a quantity field if you have it
+        unitPrice: item.pricing.basePrice,
+        totalPrice: item.pricing.basePrice 
+          + (item.customizations?.size?.price || 0) 
+          + (item.customizations?.options?.reduce((sum, opt) => sum + (opt.price || 0), 0) || 0),
+        notes: item.notes || '',
         customizations: [
           ...(item.customizations?.size ? [{
             customizationId: `size_${item.customizations.size.name.toLowerCase().replace(/\s+/g, '_')}`,
@@ -119,8 +122,8 @@ export default function CartScreen({ navigation, route }) {
             price: item.customizations.size.price,
             selectedOption: item.customizations.size.name
           }] : []),
-          ...(item.customizations?.options?.map((opt, optIndex) => ({
-            customizationId: `opt_${opt.name.toLowerCase().replace(/\s+/g, '_')}_${optIndex}`,
+          ...(item.customizations?.options?.map(opt => ({
+            customizationId: `opt_${opt.name.toLowerCase().replace(/\s+/g, '_')}`,
             name: opt.name,
             price: opt.price,
             selectedOption: opt.name
@@ -128,15 +131,13 @@ export default function CartScreen({ navigation, route }) {
         ]
       }));
 
-      // Get totals snapshot
-      const totalsSnapshot = getCartTotals();
-
       const orderRef = await addDoc(collection(db, 'orders'), {
         cafeId,
         customer: {
-          customerId: '',
+          // Use the staff-entered values here:
+          customerId: '', // For a walk-in customer, leave blank or generate your own
           name: customerName || 'Guest',
-          email: '',
+          email: '',      // If the staff doesn't know the email, leave it blank
           phone: customerPhone,
           loyaltyNumber: ''
         },
@@ -146,24 +147,24 @@ export default function CartScreen({ navigation, route }) {
           specialRequests: '' 
         },
         items,
-        orderFlow: {
-          orderedAt: serverTimestamp(),
-          estimatedReadyTime: null,
-          completedAt: null,
-          orderNumber: `ORD-${new Date().toISOString().replace(/[^0-9]/g, '').slice(-12)}`
-        },
+     orderFlow: {
+  orderedAt: serverTimestamp(),
+  estimatedReadyTime: null,
+  completedAt: null,
+  orderNumber: `ORD-${new Date().toISOString().replace(/[^0-9]/g, '').slice(-12)}`
+},
         payment: {
-          method: paymentMethod,
+          method: paymentMethod, // 'cash' or 'card'
           status: 'pending',
           transactionId: null
         },
         pricing: {
-          subtotal: totalsSnapshot.subtotal,
-          tax: totalsSnapshot.tax,
-          serviceCharge: totalsSnapshot.serviceCharge,
+          subtotal,
+          tax,
+          serviceCharge,
           discount: 0,
-          total: totalsSnapshot.total,
-          currency: itemsSnapshot[0]?.pricing?.currency || 'INR'
+          total,
+          currency: cartItems[0]?.pricing?.currency || 'INR'
         },
         staff: {
           cashierId: user.uid,
@@ -172,15 +173,13 @@ export default function CartScreen({ navigation, route }) {
           servedBy: null
         },
         status: 'pending',
-        type: 'dine_in',
+        type: 'dine_in', // or 'takeaway'/etc. Another input if needed
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
 
-      // Clear cart using CartContext method
-      clearCart();
-      
-      // Navigate after successful order creation
+      // Clear cart and navigate
+      setCartItems([]);
       navigation.replace('OrderConfirmation', { orderId: orderRef.id });
     } catch (error) {
       console.error("Error processing order:", error);
@@ -198,13 +197,7 @@ export default function CartScreen({ navigation, route }) {
       "Are you sure you want to remove all items from your cart?",
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Clear", 
-          onPress: () => {
-            clearCart(); // Use CartContext method
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          }
-        }
+        { text: "Clear", onPress: () => setCartItems([]) }
       ]
     );
   };
@@ -252,93 +245,77 @@ export default function CartScreen({ navigation, route }) {
           ) : (
             <>
               {/* List of items in cart */}
-              {cartItems.map((item, index) => {
-                // Calculate item total price
-                const itemTotal = item.totalPrice || 
-                  (item.pricing?.basePrice || item.price || 0) + 
-                  (item.customizations?.size?.price || 0) +
-                  (item.customizations?.options?.reduce((s, opt) => s + (opt.price || 0), 0) || 0);
-
-                return (
-                  <View key={`cart-item-${item.cartItemId || item.id}-${index}`} style={styles.itemContainer}>
-                    <View style={styles.itemHeader}>
-                      <Text style={styles.itemName} numberOfLines={1}>
-                        {item.basicInfo?.name || item.name}
-                      </Text>
-                      <Text style={styles.itemPrice}>
-                        {itemTotal.toFixed(2)} {item.pricing?.currency || 'INR'}
-                      </Text>
-                    </View>
-
-                    {/* Quantity */}
-                    {item.quantity > 1 && (
-                      <View style={styles.customizationRow}>
-                        <Text style={styles.customizationLabel}>Qty:</Text>
-                        <Chip style={styles.customizationChip}>
-                          {item.quantity}
-                        </Chip>
-                      </View>
-                    )}
-
-                    {/* Size */}
-                    {item.customizations?.size && (
-                      <View style={styles.customizationRow}>
-                        <Text style={styles.customizationLabel}>Size:</Text>
-                        <Chip style={styles.customizationChip}>
-                          {item.customizations.size.name} (+{item.customizations.size.price})
-                        </Chip>
-                      </View>
-                    )}
-
-                    {/* Options */}
-                    {item.customizations?.options?.length > 0 && (
-                      <View style={styles.customizationRow}>
-                        <Text style={styles.customizationLabel}>Options:</Text>
-                        <View style={styles.customizationOptions}>
-                          {item.customizations.options.map((opt, optIndex) => (
-                            <Chip key={`option-${index}-${optIndex}`} style={styles.customizationChip}>
-                              {opt.name}
-                              {opt.price > 0 ? ` (+${opt.price})` : ''}
-                            </Chip>
-                          ))}
-                        </View>
-                      </View>
-                    )}
-
-                    {/* Notes */}
-                    {(item.customizations?.notes || item.notes) && (
-                      <View style={styles.notesRow}>
-                        <Text style={styles.notesLabel}>Notes:</Text>
-                        <Text style={styles.notesText}>
-                          {item.customizations?.notes || item.notes}
-                        </Text>
-                      </View>
-                    )}
-
-                    {/* Edit/Remove Buttons */}
-                    <View style={styles.itemActions}>
-                      <Button
-                        mode="text"
-                        onPress={() => handleEditItem(index)}
-                        icon="pencil"
-                        labelStyle={styles.actionButtonText}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        mode="text"
-                        onPress={() => removeItem(index)}
-                        icon="delete"
-                        labelStyle={[styles.actionButtonText, { color: Palette.error }]}
-                      >
-                        Remove
-                      </Button>
-                    </View>
-
-                    {index < cartItems.length - 1 && <Divider style={styles.divider} />}
+              {cartItems.map((item, index) => (
+                <View key={`${item.id}-${index}`} style={styles.itemContainer}>
+                  <View style={styles.itemHeader}>
+                    <Text style={styles.itemName} numberOfLines={1}>
+                      {item.basicInfo.name}
+                    </Text>
+                    <Text style={styles.itemPrice}>
+                      {item.pricing.basePrice 
+                        + (item.customizations?.size?.price || 0)
+                        + (item.customizations?.options?.reduce((s, opt) => s + (opt.price || 0), 0) || 0)
+                      } 
+                      {item.pricing.currency}
+                    </Text>
                   </View>
-                );
-              })}
+
+                  {/* Size */}
+                  {item.customizations?.size && (
+                    <View style={styles.customizationRow}>
+                      <Text style={styles.customizationLabel}>Size:</Text>
+                      <Chip style={styles.customizationChip}>
+                        {item.customizations.size.name} (+{item.customizations.size.price})
+                      </Chip>
+                    </View>
+                  )}
+
+                  {/* Options */}
+                  {item.customizations?.options?.length > 0 && (
+                    <View style={styles.customizationRow}>
+                      <Text style={styles.customizationLabel}>Options:</Text>
+                      <View style={styles.customizationOptions}>
+                        {item.customizations.options.map((opt, i) => (
+                          <Chip key={i} style={styles.customizationChip}>
+                            {opt.name}
+                            {opt.price > 0 ? ` (+${opt.price})` : ''}
+                          </Chip>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Notes */}
+                  {item.notes && (
+                    <View style={styles.notesRow}>
+                      <Text style={styles.notesLabel}>Notes:</Text>
+                      <Text style={styles.notesText}>{item.notes}</Text>
+                    </View>
+                  )}
+
+                  {/* Edit/Remove Buttons */}
+                  <View style={styles.itemActions}>
+                    <Button
+                      mode="text"
+                      onPress={() => handleEditItem(index)}
+                      icon="pencil"
+                      labelStyle={styles.actionButtonText}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      mode="text"
+                      onPress={() => removeItem(index)}
+                      icon="delete"
+                      labelStyle={[styles.actionButtonText, { color: Palette.error }]}
+                    >
+                      Remove
+                    </Button>
+                  </View>
+
+                  {index < cartItems.length - 1 && <Divider style={styles.divider} />}
+                </View>
+              ))}
 
               {/* Order Totals */}
               <View style={styles.summaryContainer}>
@@ -363,9 +340,43 @@ export default function CartScreen({ navigation, route }) {
             </>
           )}
 
-          {/* Staff-entered customer + table info */}
+          {/* 
+             STAFF-ENTERED CUSTOMER + TABLE INFO 
+             (only shown if we have items in the cart)
+          */}
           {cartItems.length > 0 && (
             <View style={styles.customerSection}>
+              <Text style={styles.sectionTitle}>Customer Info</Text>
+              <TextInput
+                placeholder="Customer Name"
+                value={customerName}
+                onChangeText={setCustomerName}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Customer Phone"
+                value={customerPhone}
+                onChangeText={setCustomerPhone}
+                keyboardType="phone-pad"
+                style={styles.input}
+              />
+
+              <Text style={styles.sectionTitle}>Table + Guests</Text>
+              <TextInput
+                placeholder="Table Number"
+                value={tableNumber}
+                onChangeText={setTableNumber}
+                keyboardType="number-pad"
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Number of Guests"
+                value={numberOfGuests}
+                onChangeText={setNumberOfGuests}
+                keyboardType="number-pad"
+                style={styles.input}
+              />
+
               <Text style={styles.sectionTitle}>Payment Method</Text>
               <View style={styles.paymentMethodRow}>
                 <Button
@@ -592,7 +603,7 @@ const styles = StyleSheet.create({
   },
   paymentButton: {
     flex: 1,
-    marginHorizontal: 4,
+    marginRight: 8,
   },
   footer: {
     position: 'absolute',
@@ -615,3 +626,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+  
