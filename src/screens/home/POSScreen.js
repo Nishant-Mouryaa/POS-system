@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { 
   StyleSheet, 
@@ -25,22 +24,38 @@ import RecentOrders from '../../components/pos/RecentOrders';
 import ManagerTools from '../../components/pos/ManagerTools';
 
 const { width } = Dimensions.get('window');
+
 const POSScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const styles = React.useMemo(() => makeStyles(colors), [colors]);
   const auth = getAuth();
 
+  // State management
   const [isManager, setIsManager] = useState(false);
   const [userData, setUserData] = useState(null);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-
   const [recentOrders, setRecentOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [shiftData, setShiftData] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
-
-  // Add loading state to prevent multiple concurrent fetches
   const [isInitializing, setIsInitializing] = useState(false);
+
+  // Track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Safe state setter helper
+  const safeSetState = useCallback((setter) => {
+    if (isMountedRef.current) {
+      setter();
+    }
+  }, []);
 
   // Animations
   const fadeAnim        = useRef(new Animated.Value(0)).current;
@@ -53,8 +68,14 @@ const POSScreen = ({ navigation, route }) => {
   const pulseAnim       = useRef(new Animated.Value(1)).current;
   const menuButtonScale = useRef(new Animated.Value(1)).current;
 
-  // Fetch stats
+  // Fetch stats with better error handling and validation
   const fetchStats = useCallback(async (cafeId) => {
+    if (!cafeId || typeof cafeId !== 'string') {
+      throw new Error('Invalid cafe ID provided for stats fetch');
+    }
+
+    console.log('Fetching stats for cafe:', cafeId);
+
     try {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -66,7 +87,9 @@ const POSScreen = ({ navigation, route }) => {
         where('orderFlow.orderedAt', '>=', todayStart),
         where('status', '!=', 'cancelled')
       );
+      
       const querySnapshot = await getDocs(q);
+      console.log(`Found ${querySnapshot.size} orders for stats`);
 
       let stats = {
         totalSales: 0,
@@ -76,10 +99,13 @@ const POSScreen = ({ navigation, route }) => {
         preparingOrders: 0,
       };
 
-      querySnapshot.forEach((d) => {
-        const data = d.data();
-        stats.totalSales += data.pricing?.total || 0;
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const total = data.pricing?.total || 0;
+        
+        stats.totalSales += total;
         stats.totalOrders++;
+        
         if (data.status === 'completed') {
           stats.completedOrders++;
         } else if (data.status === 'preparing') {
@@ -91,23 +117,23 @@ const POSScreen = ({ navigation, route }) => {
         stats.averageOrderValue = stats.totalSales / stats.totalOrders;
       }
 
-      // Merge stats into shiftData (or store separately)
-      setShiftData((prev) => ({ ...prev, ...stats }));
+      console.log('Stats calculated:', stats);
+      return stats;
     } catch (error) {
-      console.error('Error fetching stats:', error);
-      throw error;
+      console.error('Error in fetchStats:', error);
+      throw new Error(`Failed to fetch stats: ${error.message}`);
     }
   }, []);
 
-  // Fetch recent orders
+  // Fetch recent orders with improved validation
   const fetchRecentOrders = useCallback(async (cafeId) => {
+    if (!cafeId || typeof cafeId !== 'string') {
+      throw new Error('Invalid cafe ID provided for recent orders');
+    }
+
+    console.log('Fetching recent orders for cafe:', cafeId);
+
     try {
-      console.log('Fetching orders for cafe:', cafeId);
-
-      if (!cafeId || typeof cafeId !== 'string') {
-        throw new Error('Invalid cafe ID provided');
-      }
-
       const ordersRef = collection(db, 'orders');
       const q = query(
         ordersRef,
@@ -117,13 +143,14 @@ const POSScreen = ({ navigation, route }) => {
       );
 
       const querySnapshot = await getDocs(q);
+      console.log(`Found ${querySnapshot.size} recent orders`);
 
-      const orders = querySnapshot.docs.map((d) => {
-        const data = d.data();
+      const orders = querySnapshot.docs.map((docSnap) => {
+        const data = docSnap.data();
         return {
-          id: d.id,
+          id: docSnap.id,
           ...data,
-          // Convert Firestore Timestamp -> JS Date
+          // Convert Firestore Timestamp -> JS Date safely
           orderFlow: {
             ...data.orderFlow,
             orderedAt: data.orderFlow?.orderedAt?.toDate() || new Date(),
@@ -131,93 +158,169 @@ const POSScreen = ({ navigation, route }) => {
         };
       });
 
-      setRecentOrders(orders);
+      return orders;
     } catch (error) {
-      console.error('Detailed fetchRecentOrders error:', {
-        error,
-        cafeId,
-        timestamp: new Date().toISOString(),
-      });
-      throw error;
+      console.error('Error in fetchRecentOrders:', error);
+      throw new Error(`Failed to fetch recent orders: ${error.message}`);
     }
   }, []);
 
-  const fetchAllData = useCallback(async () => {
-    try {
-      if (isInitializing) return; // Prevent multiple concurrent fetches
-      
-      const user = auth.currentUser;
-      if (!user) {
-        navigation.navigate('Auth');
-        return;
-      }
+  // Fetch shift data if shiftId is provided
+  const fetchShiftData = useCallback(async (shiftId) => {
+    if (!shiftId) return null;
 
+    try {
+      console.log('Fetching shift data for:', shiftId);
+      const shiftRef = doc(db, 'shifts', shiftId);
+      const shiftSnap = await getDoc(shiftRef);
+      
+      if (shiftSnap.exists()) {
+        console.log('Shift data found');
+        return shiftSnap.data();
+      } else {
+        console.log('No shift data found for ID:', shiftId);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching shift data:', error);
+      // Don't throw here, just return null as shift data is optional
+      return null;
+    }
+  }, []);
+
+  // Main data fetching function with proper error handling and state management
+  const fetchAllData = useCallback(async () => {
+    // Prevent multiple concurrent fetches
+    if (isInitializing) {
+      console.log('Already initializing, skipping fetch');
+      return;
+    }
+    
+    const user = auth.currentUser;
+    if (!user) {
+      console.log('No authenticated user, redirecting to Auth');
+      navigation.navigate('Auth');
+      return;
+    }
+
+    console.log('Starting data fetch for user:', user.uid);
+
+    safeSetState(() => {
       setIsInitializing(true);
       setStatsLoading(true);
       setLoadingOrders(true);
+    });
 
-      console.log('Fetching user data for UID:', user.uid);
-
-      // 1) Fetch user doc
+    try {
+      // 1) Fetch user document
+      console.log('Fetching user document...');
       const userRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userRef);
+      
       if (!userSnap.exists()) {
-        Alert.alert("Error", "User document not found");
-        return;
+        throw new Error("User document not found");
       }
 
       const uData = userSnap.data();
-      console.log('User data found, cafeId:', uData.cafeId);
+      console.log('User data retrieved:', { 
+        cafeId: uData.cafeId, 
+        role: uData.employment?.role 
+      });
       
-      setUserData(uData);
-      setIsManager(uData.employment?.role === 'manager');
-
-      // 2) Check for cafeId
-      //    Instead of throwing an error, just show an Alert and return.
+      // Validate cafeId early
       if (!uData.cafeId || typeof uData.cafeId !== 'string') {
-        console.error('User is not associated with a valid cafe');
-        Alert.alert(
-          "Invalid Café",
-          "User is not associated with a valid café ID. Please check your user profile."
-        );
-        return;
+        throw new Error("User is not associated with a valid café ID");
       }
 
-      // 3) If there's a shiftId in route, fetch shift doc
-      if (route.params?.shiftId) {
-        const shiftRef = doc(db, 'shifts', route.params.shiftId);
-        const shiftSnap = await getDoc(shiftRef);
-        if (shiftSnap.exists()) {
-          setShiftData(shiftSnap.data());
-        }
-      }
+      // Update user data immediately
+      safeSetState(() => {
+        setUserData(uData);
+        setIsManager(uData.employment?.role === 'manager');
+      });
 
-      // 4) Fetch stats & recent orders in parallel
-      await Promise.all([
+      // 2) Fetch all data in parallel for better performance
+      console.log('Fetching stats, orders, and shift data in parallel...');
+      const [statsData, ordersData, shiftDataResult] = await Promise.allSettled([
         fetchStats(uData.cafeId),
-        fetchRecentOrders(uData.cafeId)
+        fetchRecentOrders(uData.cafeId),
+        fetchShiftData(route.params?.shiftId)
       ]);
 
+      // Handle stats data
+      if (statsData.status === 'fulfilled') {
+        console.log('Stats data fetched successfully');
+        safeSetState(() => {
+          setShiftData(prev => ({ ...prev, ...statsData.value }));
+        });
+      } else {
+        console.error('Stats fetch failed:', statsData.reason);
+        // Don't throw here, just log the error and continue
+      }
+
+      // Handle orders data
+      if (ordersData.status === 'fulfilled') {
+        console.log('Orders data fetched successfully');
+        safeSetState(() => {
+          setRecentOrders(ordersData.value);
+        });
+      } else {
+        console.error('Orders fetch failed:', ordersData.reason);
+        // Don't throw here, just log the error and continue
+      }
+
+      // Handle shift data
+      if (shiftDataResult.status === 'fulfilled' && shiftDataResult.value) {
+        console.log('Shift data fetched successfully');
+        safeSetState(() => {
+          setShiftData(prev => ({ ...prev, ...shiftDataResult.value }));
+        });
+      } else if (shiftDataResult.status === 'rejected') {
+        console.error('Shift fetch failed:', shiftDataResult.reason);
+      }
+
+      console.log('Data fetch completed successfully');
+
     } catch (error) {
-      console.error("Error processing data:", error);
-      Alert.alert("Error", error.message || "Failed to load data");
+      console.error("Critical error in fetchAllData:", error);
+      
+      // Show user-friendly error messages
+      const errorMessage = error.message || "Failed to load data. Please try again.";
+      Alert.alert("Error", errorMessage);
+      
+      // If it's a critical error (like invalid cafe ID), don't retry
+      if (error.message?.includes("café ID")) {
+        return;
+      }
     } finally {
-      setStatsLoading(false);
-      setLoadingOrders(false);
-      setIsInitializing(false);
+      // Always reset loading states
+      safeSetState(() => {
+        setStatsLoading(false);
+        setLoadingOrders(false);
+        setIsInitializing(false);
+      });
     }
   }, [
+    isInitializing,
+    auth.currentUser,
     navigation, 
     route.params?.shiftId, 
     fetchStats, 
-    fetchRecentOrders, 
-    isInitializing
+    fetchRecentOrders,
+    fetchShiftData,
+    safeSetState
   ]);
 
-  // Re-run fetch when shiftId changes (or on first mount)
+  // Effect to fetch data when component mounts or shiftId changes
   useEffect(() => {
+    console.log('Effect triggered - fetching data...');
     fetchAllData();
-  }, [route.params?.shiftId]);
+  }, [route.params?.shiftId]); // Only depend on shiftId changes
+
+  // Add a retry mechanism for failed data loads
+  const handleRetry = useCallback(() => {
+    console.log('Retrying data fetch...');
+    fetchAllData();
+  }, [fetchAllData]);
 
   // Start animations on mount
   useEffect(() => {
@@ -412,13 +515,14 @@ const POSScreen = ({ navigation, route }) => {
             />
           </Animated.View>
 
-          {/* Stats Card */}
+          {/* Stats Card with retry capability */}
           <POSStatsCard
             shiftData={shiftData}
             statsCardScale={statsCardScale}
             colors={colors}
             styles={styles}
             isLoading={statsLoading}
+            onRetry={handleRetry}
           />
 
           {/* Quick Actions */}
@@ -447,6 +551,7 @@ const POSScreen = ({ navigation, route }) => {
               getStatusColor={getStatusColor}
               getStatusIcon={getStatusIcon}
               formatTimeAgo={formatTimeAgo}
+              onRetry={handleRetry}
             />
           </Animated.View>
 
@@ -470,7 +575,7 @@ const makeStyles = (colors) =>
       flex: 1,
       position: 'relative',
       paddingTop: Platform.OS === 'ios' ? 50 : 30,
-      backgroundColor: Palette.background, // Using dark background
+      backgroundColor: Palette.background,
     },
     content: {
       flexGrow: 1,
@@ -724,4 +829,3 @@ const makeStyles = (colors) =>
   });
 
 export default POSScreen;
-
