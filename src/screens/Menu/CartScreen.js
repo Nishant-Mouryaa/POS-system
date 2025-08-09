@@ -22,7 +22,15 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Palette } from '../../theme/colors';
 import { db, auth } from '../../config/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { 
+  collection, 
+  addDoc, 
+  serverTimestamp, 
+  query, 
+  where, 
+  getDocs, 
+  updateDoc 
+} from 'firebase/firestore';
 import * as Haptics from 'expo-haptics';
 
 
@@ -93,102 +101,182 @@ export default function CartScreen({ navigation, route }) {
     });
   };
 
-  const processOrder = async () => {
-    try {
-      setIsProcessing(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+const processOrder = async () => {
+  try {
+    setIsProcessing(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    
+    const user = auth.currentUser;
+    if (!user) throw new Error('User not authenticated');
 
-      // Get cafeId from the first item
-      const cafeId = cartItems[0]?.cafeId;
-      if (!cafeId) throw new Error('No cafe ID found');
+    // Get cafeId from the first item
+    const cafeId = cartItems[0]?.cafeId;
+    if (!cafeId) throw new Error('No cafe ID found');
 
-      // Prepare items
-      const items = cartItems.map(item => ({
-        itemId: item.id,
-        name: item.basicInfo.name,
-        quantity: 1, // or a quantity field if you have it
-        unitPrice: item.pricing.basePrice,
-        totalPrice: item.pricing.basePrice 
-          + (item.customizations?.size?.price || 0) 
-          + (item.customizations?.options?.reduce((sum, opt) => sum + (opt.price || 0), 0) || 0),
-        notes: item.notes || '',
-        customizations: [
-          ...(item.customizations?.size ? [{
-            customizationId: `size_${item.customizations.size.name.toLowerCase().replace(/\s+/g, '_')}`,
-            name: 'Size',
-            price: item.customizations.size.price,
-            selectedOption: item.customizations.size.name
-          }] : []),
-          ...(item.customizations?.options?.map(opt => ({
-            customizationId: `opt_${opt.name.toLowerCase().replace(/\s+/g, '_')}`,
-            name: opt.name,
-            price: opt.price,
-            selectedOption: opt.name
-          })) || [])
-        ]
-      }));
+    let customerId = '';
+    let loyaltyNumber = '';
 
-      const orderRef = await addDoc(collection(db, 'orders'), {
-        cafeId,
-        customer: {
-          // Use the staff-entered values here:
-          customerId: '', // For a walk-in customer, leave blank or generate your own
-          name: customerName || 'Guest',
-          email: '',      // If the staff doesn't know the email, leave it blank
-          phone: customerPhone,
-          loyaltyNumber: ''
-        },
-        dining: {
-          tableNumber: parseInt(tableNumber, 10) || 1,
-          numberOfGuests: parseInt(numberOfGuests, 10) || 1,
-          specialRequests: '' 
-        },
-        items,
-     orderFlow: {
-  orderedAt: serverTimestamp(),
-  estimatedReadyTime: null,
-  completedAt: null,
-  orderNumber: `ORD-${new Date().toISOString().replace(/[^0-9]/g, '').slice(-12)}`
-},
-        payment: {
-          method: paymentMethod, // 'cash' or 'card'
-          status: 'pending',
-          transactionId: null
-        },
-        pricing: {
-          subtotal,
-          tax,
-          serviceCharge,
-          discount: 0,
-          total,
-          currency: cartItems[0]?.pricing?.currency || 'INR'
-        },
-        staff: {
-          cashierId: user.uid,
-          cashierName: user.displayName || 'Staff',
-          kitchenAssignedTo: null,
-          servedBy: null
-        },
-        status: 'pending',
-        type: 'dine_in', // or 'takeaway'/etc. Another input if needed
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
+    // Handle customer creation/update if phone number is provided
+    if (customerPhone.trim()) {
+      try {
+        // Check if customer already exists by phone number
+        const customersRef = collection(db, 'customers');
+        const customerQuery = query(
+          customersRef, 
+          where('cafeId', '==', cafeId),
+          where('personalInfo.phone', '==', customerPhone.trim())
+        );
+        const customerSnapshot = await getDocs(customerQuery);
 
-      // Clear cart and navigate
-      setCartItems([]);
-      navigation.replace('OrderConfirmation', { orderId: orderRef.id });
-    } catch (error) {
-      console.error("Error processing order:", error);
-      Alert.alert("Error", "Failed to process order. Please try again.");
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setIsProcessing(false);
+        if (!customerSnapshot.empty) {
+          // Customer exists - update their information
+          const existingCustomer = customerSnapshot.docs[0];
+          customerId = existingCustomer.id;
+          const customerData = existingCustomer.data();
+          
+          // Update last visit and visit count
+          await updateDoc(existingCustomer.ref, {
+            'loyalty.lastVisit': serverTimestamp(),
+            'loyalty.visitCount': (customerData.loyalty?.visitCount || 0) + 1,
+            'loyalty.totalSpent': (customerData.loyalty?.totalSpent || 0) + total,
+            'personalInfo.firstName': customerName.split(' ')[0] || customerData.personalInfo?.firstName || '',
+            'personalInfo.lastName': customerName.split(' ').slice(1).join(' ') || customerData.personalInfo?.lastName || '',
+            updatedAt: serverTimestamp()
+          });
+          
+          loyaltyNumber = customerData.loyaltyNumber || '';
+        } else {
+          // Create new customer
+          const newCustomerId = `customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const newLoyaltyNumber = `LOY${Date.now().toString().slice(-6)}`;
+          
+          const customerData = {
+            id: newCustomerId,
+            cafeId: cafeId,
+            personalInfo: {
+              firstName: customerName.split(' ')[0] || 'Guest',
+              lastName: customerName.split(' ').slice(1).join(' ') || '',
+              phone: customerPhone.trim(),
+              email: '', // Can be updated later if provided
+              dateOfBirth: null,
+              anniversary: null
+            },
+            loyalty: {
+              loyaltyNumber: newLoyaltyNumber,
+              points: 0, // You might want to calculate initial points based on the order
+              tier: 'bronze', // Default tier
+              totalSpent: total,
+              visitCount: 1,
+              lastVisit: serverTimestamp()
+            },
+            marketing: {
+              emailOptIn: false,
+              smsOptIn: false,
+              promotionalOffers: false,
+              birthdayOffers: false
+            },
+            preferences: {
+              favoriteItems: [],
+              dietaryRestrictions: [],
+              notes: ''
+            },
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          };
+
+          const customerDocRef = await addDoc(collection(db, 'customers'), customerData);
+          customerId = customerDocRef.id;
+          loyaltyNumber = newLoyaltyNumber;
+        }
+      } catch (customerError) {
+        console.error('Error handling customer:', customerError);
+        // Continue with order creation even if customer handling fails
+      }
     }
-  };
+
+    // Prepare items for order
+    const items = cartItems.map(item => ({
+      itemId: item.id,
+      name: item.basicInfo.name,
+      quantity: 1,
+      unitPrice: item.pricing.basePrice,
+      totalPrice: item.pricing.basePrice 
+        + (item.customizations?.size?.price || 0) 
+        + (item.customizations?.options?.reduce((sum, opt) => sum + (opt.price || 0), 0) || 0),
+      notes: item.notes || '',
+      customizations: [
+        ...(item.customizations?.size ? [{
+          customizationId: `size_${item.customizations.size.name.toLowerCase().replace(/\s+/g, '_')}`,
+          name: 'Size',
+          price: item.customizations.size.price,
+          selectedOption: item.customizations.size.name
+        }] : []),
+        ...(item.customizations?.options?.map(opt => ({
+          customizationId: `opt_${opt.name.toLowerCase().replace(/\s+/g, '_')}`,
+          name: opt.name,
+          price: opt.price,
+          selectedOption: opt.name
+        })) || [])
+      ]
+    }));
+
+    // Create the order
+    const orderRef = await addDoc(collection(db, 'orders'), {
+      cafeId,
+      customer: {
+        customerId: customerId, // Now we have a proper customer ID
+        name: customerName || 'Guest',
+        phone: customerPhone,
+        loyaltyNumber: loyaltyNumber
+      },
+      dining: {
+        tableNumber: parseInt(tableNumber, 10) || 1,
+        numberOfGuests: parseInt(numberOfGuests, 10) || 1,
+        specialRequests: '' 
+      },
+      items,
+      orderFlow: {
+        orderedAt: serverTimestamp(),
+        estimatedReadyTime: null,
+        completedAt: null,
+        orderNumber: `ORD-${new Date().toISOString().replace(/[^0-9]/g, '').slice(-12)}`
+      },
+      payment: {
+        method: paymentMethod,
+        status: 'pending',
+        transactionId: null
+      },
+      pricing: {
+        subtotal,
+        tax,
+        serviceCharge,
+        discount: 0,
+        total,
+        currency: cartItems[0]?.pricing?.currency || 'INR'
+      },
+      staff: {
+        cashierId: user.uid,
+        cashierName: user.displayName || 'Staff',
+        kitchenAssignedTo: null,
+        servedBy: null
+      },
+      status: 'pending',
+      type: 'dine_in',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    // Clear cart and navigate
+    setCartItems([]);
+    navigation.replace('OrderConfirmation', { orderId: orderRef.id });
+  } catch (error) {
+    console.error("Error processing order:", error);
+    Alert.alert("Error", "Failed to process order. Please try again.");
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const confirmClearCart = () => {
     Haptics.selectionAsync(Haptics.NotificationFeedbackType.Warning);

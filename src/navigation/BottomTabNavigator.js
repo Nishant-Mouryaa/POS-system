@@ -18,9 +18,11 @@ import * as Haptics from 'expo-haptics';
 import POSScreen from '../screens/home/POSScreen';
 import { ComponentColors, Palette } from '../theme/colors';
 import MenuCategoryScreen from '../screens/Menu/MenuCategoryScreen';
+import CustomerManagementScreen from '../screens/customer/CustomerManagementScreen';
 import OrderManagementScreen from '../screens/Order/OrderManagementScreen';
 const { width } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
+
 
 const TabBarIcon = ({ route, focused, color, size }) => {
   const scaleValue = React.useRef(new Animated.Value(1)).current;
@@ -39,6 +41,7 @@ const TabBarIcon = ({ route, focused, color, size }) => {
     MenuCategoryScreen: focused ? 'food-fork-drink' : 'food-outline',
     OrderManagementScreen: focused ? 'clipboard-text' : 'clipboard-text-outline',
     MessageCenter: focused ? 'message-outline' : 'message-outline',
+    CustomerManagementScreen: focused ? 'account-group' : 'account-group-outline',
   }[route.name];
 
   return (
@@ -181,6 +184,13 @@ const BottomTabNavigator = () => {
           component={OrderManagementScreen} 
           options={{ tabBarLabel: 'Orders' }} 
         />
+       
+          <Tab.Screen 
+            name="CustomerManagementScreen" 
+            component={CustomerManagementScreen} 
+            options={{ tabBarLabel: 'Customers' }} 
+          />
+      
       </Tab.Navigator>
     </>
   );
