@@ -152,25 +152,24 @@ const handleOptionSelection = (customization, option) => {
     return total * quantity;
   };
 
-  const handleAddToCart = () => {
-    if (!item) return;
+const handleAddToCart = () => {
+  if (!item) return;
 
-    // Convert selectedOptions map into the structure you need
-    const cartItem = {
-      ...item,
-      cafeId: cafeId, // Make sure cafeId is included
-      customizations: {
-        size: selectedSize,
-        selectedOptions,
-        notes
-      },
-      quantity
-    };
-
-    addToCart(cartItem);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    navigation.goBack();
+  const cartItem = {
+    ...item,
+    cafeId: cafeId,
+    customizations: {
+      size: selectedSize,
+      selectedOptions,
+      notes
+    },
+    quantity
   };
+
+  addToCart(cartItem); // ✅ Use CartContext instead of callback
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  navigation.goBack();
+};
 
   if (loading || !item) {
     return (

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -17,7 +16,7 @@ import {
   Divider,
   ActivityIndicator
 } from 'react-native-paper';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, CommonActions } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -41,19 +40,6 @@ export default function OrderConfirmation({ navigation, route }) {
   const fadeAnim = useState(new Animated.Value(0))[0];
   const slideUpAnim = useState(new Animated.Value(30))[0];
 
-  // If you really need to reset to show this screen once, do it in a single useEffect:
-  /*
-  useEffect(() => {
-    navigation.reset({
-      index: 1,
-      routes: [
-        { name: 'MenuCategoryScreen' },
-        { name: 'OrderConfirmation', params: { orderId } }
-      ],
-    });
-  }, []);
-  */
-
   // Handle back navigation with useFocusEffect
   useFocusEffect(
     React.useCallback(() => {
@@ -70,9 +56,9 @@ export default function OrderConfirmation({ navigation, route }) {
               text: 'Go to Menu',
               onPress: () => {
                 clearCart();
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'MenuCategoryScreen' }]
+                // Navigate back to the Main (BottomTabNavigator) and show Menu tab
+                navigation.navigate('Main', { 
+                  screen: 'MenuCategoryScreen' 
                 });
               }
             }
@@ -168,13 +154,30 @@ export default function OrderConfirmation({ navigation, route }) {
     }
   };
 
+  // FIXED: Navigate back to tab navigator
   const handleNewOrder = () => {
     Haptics.selectionAsync();
     clearCart();
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'MenuCategoryScreen' }]
+    
+    // Navigate back to the Main screen (BottomTabNavigator) and then to Menu tab
+    navigation.navigate('Main', { 
+      screen: 'MenuCategoryScreen' 
     });
+  };
+
+  // ALTERNATIVE: If you want to go back to the previous screen in the tab
+  const handleNewOrderSimple = () => {
+    Haptics.selectionAsync();
+    clearCart();
+    
+    // Simply go back to previous screen
+    navigation.goBack();
+    
+    // Or go back multiple screens if needed
+    // navigation.pop(2); // Go back 2 screens
+    
+    // Or navigate to a specific screen within current tab
+    // navigation.navigate('MenuCategoryScreen');
   };
 
   const handleViewOrder = () => {
@@ -373,21 +376,6 @@ export default function OrderConfirmation({ navigation, route }) {
               </>
             )}
           </View>
-
-          {/* Example: If you have cafeDetails, uncomment and provide the data */}
-          {/* {cafeDetails && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Cafe Information</Text>
-              <Text style={styles.cafeName}>{cafeDetails.name}</Text>
-              <Text style={styles.cafeAddress}>{cafeDetails.addressString}</Text>
-              <Text style={styles.cafeContact}>
-                {cafeDetails.contact.phone} • {cafeDetails.contact.email}
-              </Text>
-              <Text style={styles.thankYou}>
-                Thank you for your order! Please visit again.
-              </Text>
-            </View>
-          )} */}
         </Animated.View>
       </ScrollView>
 
@@ -631,4 +619,3 @@ const styles = StyleSheet.create({
     fontWeight: '600'
   }
 });
-

@@ -15,7 +15,6 @@ import { getAuth } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { Palette } from '../../theme/colors';
-
 // Your local components:
 import Sidebar from '../../navigation/Sidebar';
 import POSMenuButton from '../../components/pos/POSMenuButton';
@@ -26,7 +25,6 @@ import RecentOrders from '../../components/pos/RecentOrders';
 import ManagerTools from '../../components/pos/ManagerTools';
 
 const { width } = Dimensions.get('window');
-
 const POSScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const styles = React.useMemo(() => makeStyles(colors), [colors]);
@@ -68,7 +66,6 @@ const POSScreen = ({ navigation, route }) => {
         where('orderFlow.orderedAt', '>=', todayStart),
         where('status', '!=', 'cancelled')
       );
-
       const querySnapshot = await getDocs(q);
 
       let stats = {
