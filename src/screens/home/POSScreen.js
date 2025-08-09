@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { 
   StyleSheet, 
@@ -5,20 +6,18 @@ import {
   ScrollView, 
   Animated, 
   Dimensions,
-  TouchableOpacity,
   Platform,
   Alert,
 } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { Palette } from '../../theme/colors';
+
 // Your local components:
 import Sidebar from '../../navigation/Sidebar';
-
 import POSMenuButton from '../../components/pos/POSMenuButton';
 import POSUserHeader from '../../components/pos/POSUserHeader';
 import POSStatsCard from '../../components/pos/POSStatsCard';
@@ -56,7 +55,7 @@ const POSScreen = ({ navigation, route }) => {
   const pulseAnim       = useRef(new Animated.Value(1)).current;
   const menuButtonScale = useRef(new Animated.Value(1)).current;
 
-  // Fetch stats - now stable with useCallback
+  // Fetch stats
   const fetchStats = useCallback(async (cafeId) => {
     try {
       const todayStart = new Date();
@@ -95,15 +94,15 @@ const POSScreen = ({ navigation, route }) => {
         stats.averageOrderValue = stats.totalSales / stats.totalOrders;
       }
 
-      // Merge stats into shiftData (or store it separately, up to you)
+      // Merge stats into shiftData (or store separately)
       setShiftData((prev) => ({ ...prev, ...stats }));
     } catch (error) {
       console.error('Error fetching stats:', error);
-      throw error; // Rethrow so fetchAllData catch can handle it if desired
+      throw error;
     }
-  }, []); // No dependencies - this function doesn't depend on any state
+  }, []);
 
-  // Fetch recent orders - now stable with useCallback
+  // Fetch recent orders
   const fetchRecentOrders = useCallback(async (cafeId) => {
     try {
       console.log('Fetching orders for cafe:', cafeId);
@@ -144,15 +143,12 @@ const POSScreen = ({ navigation, route }) => {
       });
       throw error;
     }
-  }, []); // No dependencies
+  }, []);
 
-  // FIXED: Remove circular dependency by not including fetchAllData in its own dependencies
   const fetchAllData = useCallback(async () => {
     try {
-      // Prevent multiple concurrent fetches
-      if (isInitializing) return;
+      if (isInitializing) return; // Prevent multiple concurrent fetches
       
-      // Must be signed in
       const user = auth.currentUser;
       if (!user) {
         navigation.navigate('Auth');
@@ -169,7 +165,8 @@ const POSScreen = ({ navigation, route }) => {
       const userRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) {
-        throw new Error('User document not found');
+        Alert.alert("Error", "User document not found");
+        return;
       }
 
       const uData = userSnap.data();
@@ -178,12 +175,18 @@ const POSScreen = ({ navigation, route }) => {
       setUserData(uData);
       setIsManager(uData.employment?.role === 'manager');
 
-      // 2) Make sure user has a valid cafeId
+      // 2) Check for cafeId
+      //    Instead of throwing an error, just show an Alert and return.
       if (!uData.cafeId || typeof uData.cafeId !== 'string') {
-        throw new Error('User is not associated with a valid cafe');
+        console.error('User is not associated with a valid cafe');
+        Alert.alert(
+          "Invalid Café",
+          "User is not associated with a valid café ID. Please check your user profile."
+        );
+        return;
       }
 
-      // 3) If there's a shiftId, fetch shift doc
+      // 3) If there's a shiftId in route, fetch shift doc
       if (route.params?.shiftId) {
         const shiftRef = doc(db, 'shifts', route.params.shiftId);
         const shiftSnap = await getDoc(shiftRef);
@@ -197,20 +200,27 @@ const POSScreen = ({ navigation, route }) => {
         fetchStats(uData.cafeId),
         fetchRecentOrders(uData.cafeId)
       ]);
+
     } catch (error) {
-      console.error("Error processing order:", error);
+      console.error("Error processing data:", error);
       Alert.alert("Error", error.message || "Failed to load data");
     } finally {
       setStatsLoading(false);
       setLoadingOrders(false);
       setIsInitializing(false);
     }
-  }, [navigation, route.params?.shiftId, fetchStats, fetchRecentOrders, isInitializing]); // Now includes stable dependencies
+  }, [
+    navigation, 
+    route.params?.shiftId, 
+    fetchStats, 
+    fetchRecentOrders, 
+    isInitializing
+  ]);
 
-  // FIXED: Only run once on mount or when shiftId changes
+  // Re-run fetch when shiftId changes (or on first mount)
   useEffect(() => {
     fetchAllData();
-  }, [route.params?.shiftId]); // Remove fetchAllData from dependencies
+  }, [route.params?.shiftId]);
 
   // Start animations on mount
   useEffect(() => {
@@ -324,7 +334,7 @@ const POSScreen = ({ navigation, route }) => {
     }
   }, []);
 
-  // Quick actions for the POS - memoize to prevent recreating
+  // Quick actions
   const quickActions = React.useMemo(() => [
     {
       icon: 'point-of-sale',
@@ -354,7 +364,7 @@ const POSScreen = ({ navigation, route }) => {
     navigation.navigate('OrderDetail', { orderId: order.id });
   }, [navigation]);
 
-  // Manager tools callback
+  // Manager tools
   const handleDashboardPress = useCallback((tab) => {
     navigation.navigate('Manager', { screen: tab || 'Dashboard' });
   }, [navigation]);
@@ -457,13 +467,13 @@ const POSScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (colors) => 
+const makeStyles = (colors) =>
   StyleSheet.create({
     screenContainer: {
       flex: 1,
       position: 'relative',
       paddingTop: Platform.OS === 'ios' ? 50 : 30,
-      backgroundColor: Palette.background, // Using dark background from palette
+      backgroundColor: Palette.background, // Using dark background
     },
     content: {
       flexGrow: 1,
@@ -487,7 +497,7 @@ const makeStyles = (colors) =>
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: Palette.glassBorder, // Using glass border effect
+      borderColor: Palette.glassBorder, 
     },
     headerContainer: { 
       marginTop: 48,
@@ -502,7 +512,7 @@ const makeStyles = (colors) =>
     avatar: {
       marginRight: 16,
       backgroundColor: colors.primary,
-      shadowColor: Palette.shadowColored, // Using colored shadow
+      shadowColor: Palette.shadowColored, 
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 8,
@@ -514,14 +524,14 @@ const makeStyles = (colors) =>
     },
     welcomeText: {
       fontSize: 18,
-      color: Palette.textSecondary, // Using secondary text color
+      color: Palette.textSecondary,
       marginBottom: 4,
       fontWeight: '400',
     },
     userName: {
       fontSize: 26,
       fontWeight: '700',
-      color: Palette.text, // Primary text color
+      color: Palette.text, 
       letterSpacing: 0.5,
     },
         
@@ -541,23 +551,23 @@ const makeStyles = (colors) =>
     statItem: {
       alignItems: 'center',
       flex: 1,
-      minWidth: 80, // Ensure minimum width for each item
+      minWidth: 80,
     },
     statDivider: {
-      width: 1, // Made thinner to save space
+      width: 1,
       height: 40,
       backgroundColor: Palette.divider, 
-      marginHorizontal: 8, // Reduced margin
+      marginHorizontal: 8,
     },
     statValue: {
-      fontSize: 24, // Slightly smaller to allow for large numbers
+      fontSize: 24,
       fontWeight: '700',
       marginBottom: 6,
       color: colors.primary,
-      maxWidth: '100%', // Ensure text doesn't overflow
+      maxWidth: '100%',
     },
     statLabel: {
-      fontSize: 12, // Slightly smaller
+      fontSize: 12,
       textAlign: 'center',
       color: Palette.textMuted,
       fontWeight: '500',
@@ -566,7 +576,7 @@ const makeStyles = (colors) =>
       fontSize: 20,
       fontWeight: '700',
       marginBottom: 16,
-      color: Palette.text, // Primary text color
+      color: Palette.text,
       letterSpacing: 0.5,
     },
     featuresGrid: {
@@ -589,7 +599,7 @@ const makeStyles = (colors) =>
       paddingVertical: 24,
       paddingHorizontal: 16,
       alignItems: 'center',
-      backgroundColor: Palette.surfaceContainer, // Container surface
+      backgroundColor: Palette.surfaceContainer,
       borderWidth: 1,
       borderColor: Palette.borderLight,
       overflow: 'hidden',
@@ -619,7 +629,7 @@ const makeStyles = (colors) =>
       borderRadius: 20,
       padding: 16,
       marginBottom: 28,
-      backgroundColor: Palette.surfaceContainer, // Container surface
+      backgroundColor: Palette.surfaceContainer,
       borderWidth: 1,
       borderColor: Palette.borderLight,
       shadowColor: Palette.shadow,
@@ -633,7 +643,7 @@ const makeStyles = (colors) =>
       alignItems: 'center',
       paddingVertical: 12,
       borderBottomWidth: 1,
-      borderBottomColor: Palette.divider + '80', // Slightly transparent
+      borderBottomColor: Palette.divider + '80',
     },
     activityIconContainer: {
       width: 40,
@@ -642,7 +652,7 @@ const makeStyles = (colors) =>
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 12,
-      backgroundColor: Palette.surfaceVariant, // Variant surface
+      backgroundColor: Palette.surfaceVariant,
     },
     activityContent: {
       flex: 1,
@@ -715,4 +725,6 @@ const makeStyles = (colors) =>
       fontWeight: '600',
     },
   });
+
 export default POSScreen;
+
