@@ -600,53 +600,54 @@ const getTierColor = (tier) => {
               )}
               
               {/* Marketing Preferences */}
-              <View style={styles.marketingSection}>
-                <Text style={styles.sectionTitle}>Marketing Preferences</Text>
-                
-                <View style={styles.marketingRow}>
-                  <MaterialCommunityIcons 
-                    name={selectedCustomer.marketing?.emailOptIn ? 'email-check' : 'email-remove'} 
-                    size={20} 
-                    color={selectedCustomer.marketing?.emailOptIn ? Palette.success : Palette.error} 
-                  />
-                  <Text style={styles.marketingText}>
-                    Email: {selectedCustomer.marketing?.emailOptIn ? 'Subscribed' : 'Unsubscribed'}
-                  </Text>
-                </View>
-                
-                <View style={styles.marketingRow}>
-                  <MaterialCommunityIcons 
-                    name={selectedCustomer.marketing?.smsOptIn ? 'message-text-check' : 'message-text-remove'} 
-                    size={20} 
-                    color={selectedCustomer.marketing?.smsOptIn ? Palette.success : Palette.error} 
-                  />
-                  <Text style={styles.marketingText}>
-                    SMS: {selectedCustomer.marketing?.smsOptIn ? 'Subscribed' : 'Unsubscribed'}
-                  </Text>
-                </View>
-                
-                <View style={styles.marketingRow}>
-                  <MaterialCommunityIcons 
-                    name={selectedCustomer.marketing?.promotionalOffers ? 'tag-check' : 'tag-remove'} 
-                    size={20} 
-                    color={selectedCustomer.marketing?.promotionalOffers ? Palette.success : Palette.error} 
-                  />
-                  <Text style={styles.marketingText}>
-                    Promotions: {selectedCustomer.marketing?.promotionalOffers ? 'Subscribed' : 'Unsubscribed'}
-                  </Text>
-                </View>
-                
-                <View style={styles.marketingRow}>
-                  <MaterialCommunityIcons 
-                    name={selectedCustomer.marketing?.birthdayOffers ? 'cake-variant' : 'cake-off'} 
-                    size={20} 
-                    color={selectedCustomer.marketing?.birthdayOffers ? Palette.success : Palette.error} 
-                  />
-                  <Text style={styles.marketingText}>
-                    Birthday Offers: {selectedCustomer.marketing?.birthdayOffers ? 'Subscribed' : 'Unsubscribed'}
-                  </Text>
-                </View>
-              </View>
+          {/* Marketing Preferences */}
+<View style={styles.marketingSection}>
+  <Text style={styles.sectionTitle}>Marketing Preferences</Text>
+  
+  <View style={styles.marketingRow}>
+    <MaterialCommunityIcons 
+      name={selectedCustomer.marketing?.emailOptIn ? 'email-check' : 'email-off'} 
+      size={20} 
+      color={selectedCustomer.marketing?.emailOptIn ? Palette.success : Palette.error} 
+    />
+    <Text style={styles.marketingText}>
+      Email: {selectedCustomer.marketing?.emailOptIn ? 'Subscribed' : 'Unsubscribed'}
+    </Text>
+  </View>
+  
+  <View style={styles.marketingRow}>
+    <MaterialCommunityIcons 
+      name={selectedCustomer.marketing?.smsOptIn ? 'message-check' : 'message-off'} 
+      size={20} 
+      color={selectedCustomer.marketing?.smsOptIn ? Palette.success : Palette.error} 
+    />
+    <Text style={styles.marketingText}>
+      SMS: {selectedCustomer.marketing?.smsOptIn ? 'Subscribed' : 'Unsubscribed'}
+    </Text>
+  </View>
+  
+  <View style={styles.marketingRow}>
+    <MaterialCommunityIcons 
+      name={selectedCustomer.marketing?.promotionalOffers ? 'tag-check' : 'tag-off'} 
+      size={20} 
+      color={selectedCustomer.marketing?.promotionalOffers ? Palette.success : Palette.error} 
+    />
+    <Text style={styles.marketingText}>
+      Promotions: {selectedCustomer.marketing?.promotionalOffers ? 'Subscribed' : 'Unsubscribed'}
+    </Text>
+  </View>
+  
+  <View style={styles.marketingRow}>
+    <MaterialCommunityIcons 
+      name={selectedCustomer.marketing?.birthdayOffers ? 'cake-variant' : 'cake'} 
+      size={20} 
+      color={selectedCustomer.marketing?.birthdayOffers ? Palette.success : Palette.error} 
+    />
+    <Text style={styles.marketingText}>
+      Birthday Offers: {selectedCustomer.marketing?.birthdayOffers ? 'Subscribed' : 'Unsubscribed'}
+    </Text>
+  </View>
+</View>
             </ScrollView>
             
             <View style={styles.modalFooter}>

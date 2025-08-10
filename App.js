@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ImageBackground, Platform, Alert, AppState } from 'react-native';
+import { Platform, Alert, AppState } from 'react-native';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { useFonts } from 'expo-font';
 import Constants from 'expo-constants';
@@ -340,15 +340,11 @@ export default function App() {
   return (
         <CartProvider>
     <PaperProvider theme={LightTheme}>
-      <ImageBackground 
-        source={require('./assets/backGround-wrapper (2).png')} 
-        style={{ flex: 1 }}
-        resizeMode="cover"
-      >
+      
         <AppProvider>
           <AppNavigator />
         </AppProvider>
-      </ImageBackground>
+      
     </PaperProvider>
     </CartProvider>
   );
