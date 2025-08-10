@@ -108,26 +108,99 @@ const LoginScreen = () => {
   }, []);
 
   // Check if user has staff permissions
-  const checkStaffPermissions = async (userId) => {
-    try {
-      const userRef = doc(db, 'users', userId);
-      const userSnap = await getDoc(userRef);
-      
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        return {
-          isStaff: userData.employment?.isActive || false,
-          role: userData.employment?.role || null,
-          permissions: userData.permissions || {},
-          cafeId: userData.cafeId || null
-        };
-      }
-      return { isStaff: false, role: null, permissions: {}, cafeId: null };
-    } catch (error) {
-      console.error("Error checking staff permissions:", error);
-      return { isStaff: false, role: null, permissions: {}, cafeId: null };
+// Update the checkStaffPermissions function to check custom claims
+const checkStaffPermissions = async (userId) => {
+  try {
+    // Get the user's ID token to access custom claims
+    const user = auth.currentUser;
+    if (!user) return { isStaff: false, role: null, permissions: {} };
+    
+    // Force token refresh to get latest claims
+    const idTokenResult = await user.getIdTokenResult(true);
+    
+    // Check custom claims first (these are set via Admin SDK)
+    if (idTokenResult.claims.admin || idTokenResult.claims.manager || idTokenResult.claims.staff) {
+      return {
+        isStaff: true,
+        role: idTokenResult.claims.role || 'staff',
+        permissions: {
+          admin: idTokenResult.claims.admin || false,
+          manager: idTokenResult.claims.manager || false,
+          staff: idTokenResult.claims.staff || false,
+          ...idTokenResult.claims.permissions
+        }
+      };
     }
-  };
+
+    // Fallback to Firestore check if no custom claims exist
+    const userRef = doc(db, 'staff', userId); // Changed from 'users' to 'staff'
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      return {
+        isStaff: userData.active || false,
+        role: userData.role || null,
+        permissions: userData.permissions || {}
+      };
+    }
+    
+    return { isStaff: false, role: null, permissions: {} };
+  } catch (error) {
+    console.error("Error checking staff permissions:", error);
+    return { isStaff: false, role: null, permissions: {} };
+  }
+};
+
+// Modify the handleSignIn function to handle admin redirection
+const handleSignIn = useCallback(async () => {
+  Keyboard.dismiss();
+  setError('');
+
+  if (!email || !password) {
+    setError('Email and password are required');
+    runShakeAnimation();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // Check if user is staff and get their role
+    const { isStaff, role, permissions } = await checkStaffPermissions(user.uid);
+    
+    if (!isStaff) {
+      setError('This account is not authorized for staff access');
+      runShakeAnimation();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setLoading(false);
+      return;
+    }
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    
+    // Navigate to appropriate screen based on role
+    if (role === 'admin') {
+      navigation.navigate('AdminDashboard');
+    } else if (role === 'manager') {
+      navigation.navigate('ManagerDashboard');
+    } else {
+      // For regular staff, create a shift and go to POS
+      const newShiftId = await createNewShift(user.uid);
+      setShiftId(newShiftId);
+      navigation.navigate('POS', { shiftId: newShiftId });
+    }
+  } catch (err) {
+    setError(getErrorMessage(err.code));
+    runShakeAnimation();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  } finally {
+    setLoading(false);
+  }
+}, [auth, email, password, runShakeAnimation, getErrorMessage, navigation]);
 
   // Create a new shift when staff logs in
   const createNewShift = async (userId, cafeId) => {
@@ -174,54 +247,6 @@ const LoginScreen = () => {
     }
   };
 
-  // Handle sign in for cafe staff
-  const handleSignIn = useCallback(async () => {
-    Keyboard.dismiss();
-    setError('');
-
-    if (!email || !password) {
-      setError('Email and password are required');
-      runShakeAnimation();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Check if user is staff
-      const { isStaff, role, permissions, cafeId } = await checkStaffPermissions(user.uid);
-      
-      if (!isStaff) {
-        setError('This account is not authorized for staff access');
-        runShakeAnimation();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        setLoading(false);
-        return;
-      }
-
-      // Create a new shift for the staff member
-      const newShiftId = await createNewShift(user.uid, cafeId);
-      setShiftId(newShiftId);
-
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      // Navigate to appropriate screen based on role
-      if (role === 'manager' || role === 'admin') {
-        navigation.navigate('ManagerDashboard', { shiftId: newShiftId });
-      } else {
-        navigation.navigate('POS', { shiftId: newShiftId });
-      }
-    } catch (err) {
-      setError(getErrorMessage(err.code));
-      runShakeAnimation();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth, email, password, runShakeAnimation, getErrorMessage, navigation]);
 
   // Toggle secure text entry
   const toggleSecureText = useCallback(() => {
