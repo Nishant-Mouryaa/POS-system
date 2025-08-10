@@ -686,7 +686,7 @@ const makeStyles = (colors) =>
       flexWrap: 'wrap',
       justifyContent: 'space-between',
       marginBottom: 28,
-    },
+    }, 
     featureItemContainer: {
       width: '48%',
       marginBottom: 16,
