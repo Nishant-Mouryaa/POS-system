@@ -1,48 +1,140 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Provider as PaperProvider } from 'react-native-paper';
-import AdminPanel from '../screens/Admin/AdminPanel';
-
-import { AdminPalette } from '../theme/colors';
-import { AdminDarkTheme } from '../theme'; // Optional custom theme if shaped for Paper
+import AdminDashboard from '../screens/Admin/AdminDashboard';
+import StaffManagementScreen from '../screens/Admin/StaffManagementScreen';
+import InventoryManagementScreen from '../screens/Admin/InventoryManagementScreen';
+import ReportsScreen from '../screens/Admin/ReportsScreen';
+import AdminSettingsScreen from '../screens/Admin/AdminSettingsScreen';
+import MenuManagementScreen from '../screens/Admin/MenuManagementScreen';
+import { Palette } from '../theme/colors';
 
 const Stack = createStackNavigator();
 
 const AdminStack = () => {
-  // Wrap the stack navigator in a PaperProvider to apply AdminPalette-based theme
   return (
-    <PaperProvider theme={AdminPalette}>
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: AdminPalette.primary, // Admin primary color
-            elevation: 0,
-            shadowOpacity: 0,
-          },
-          headerTintColor: AdminPalette.text, // Text color from Admin palette
-          headerTitleStyle: {
-            fontWeight: '600',
-            fontSize: 20,
-          },
-          headerBackTitleVisible: false,
-          headerTitleAlign: 'center',
-          cardStyle: {
-            backgroundColor: AdminPalette.bg, // Dark background for admin screens
-          },
-          
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        cardStyle: { backgroundColor: Palette.background },
+        cardStyleInterpolator: ({ current, layouts }) => {
+          return {
+            cardStyle: {
+              transform: [
+                {
+                  translateX: current.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [layouts.screen.width, 0],
+                  }),
+                },
+              ],
+            },
+          };
+        },
+      }}
+    >
+      <Stack.Screen 
+        name="AdminDashboard" 
+        component={AdminDashboard}
+        options={{
+          title: 'Admin Dashboard',
         }}
-      >
-        <Stack.Screen 
-          name="AdminPanel" 
-          component={AdminPanel} 
-          options={{ headerShown: false }}
-        />
-      
-     
-        
-        
-      </Stack.Navigator>
-    </PaperProvider>
+      />
+      <Stack.Screen 
+        name="StaffManagement" 
+        component={StaffManagementScreen}
+        options={{
+          title: 'Staff Management',
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: Palette.surface,
+            shadowColor: 'transparent',
+            elevation: 0,
+          },
+          headerTitleStyle: {
+            color: Palette.text,
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          headerTintColor: Palette.primary,
+        }}
+      />
+      <Stack.Screen 
+        name="InventoryManagement" 
+        component={InventoryManagementScreen}
+        options={{
+          title: 'Inventory Management',
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: Palette.surface,
+            shadowColor: 'transparent',
+            elevation: 0,
+          },
+          headerTitleStyle: {
+            color: Palette.text,
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          headerTintColor: Palette.primary,
+        }}
+      />
+      <Stack.Screen 
+        name="Reports" 
+        component={ReportsScreen}
+        options={{
+          title: 'Reports & Analytics',
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: Palette.surface,
+            shadowColor: 'transparent',
+            elevation: 0,
+          },
+          headerTitleStyle: {
+            color: Palette.text,
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          headerTintColor: Palette.primary,
+        }}
+      />
+      <Stack.Screen 
+        name="AdminSettings" 
+        component={AdminSettingsScreen}
+        options={{
+          title: 'Admin Settings',
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: Palette.surface,
+            shadowColor: 'transparent',
+            elevation: 0,
+          },
+          headerTitleStyle: {
+            color: Palette.text,
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          headerTintColor: Palette.primary,
+        }}
+      />
+      <Stack.Screen 
+        name="MenuManagement" 
+        component={MenuManagementScreen}
+        options={{
+          title: 'Menu Management',
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: Palette.surface,
+            shadowColor: 'transparent',
+            elevation: 0,
+          },
+          headerTitleStyle: {
+            color: Palette.text,
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          headerTintColor: Palette.primary,
+        }}
+      />
+    </Stack.Navigator>
   );
 };
 

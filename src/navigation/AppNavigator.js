@@ -4,8 +4,9 @@ import { createStackNavigator } from '@react-navigation/stack';
 import LoginScreen from '../screens/auth/LoginScreen';
 import SignupScreen from '../screens/auth/SignupScreen';
 import BottomTabNavigator from './BottomTabNavigator';
-import AdminStack from './AdminStack'; // Import the new AdminStack
-import PdfViewerScreen from '../screens/PdfViewerScreen';
+import AdminStack from './AdminStack';
+import ManagerDashboard from '../screens/manager/ManagerDashboard'; // You'll need to create this
+
 import AboutUsScreen from '../screens/sidebar/AboutUsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -18,13 +19,11 @@ import ItemDetail from '../screens/Menu/ItemDetail';
 import OrderConfirmation from '../screens/Menu/OrderConfirmation';
 import OrderDetailScreen from '../screens/Order/OrderDetailScreen';
 
-
 const AuthStack = createStackNavigator();
 const AppStack = createStackNavigator();
 
 const AuthNavigator = () => (
-  <AuthStack.Navigator initialRouteName="Intro" screenOptions={{ headerShown: false }}>
-    
+  <AuthStack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
     <AuthStack.Screen name="Login" component={LoginScreen} />
     <AuthStack.Screen name="Signup" component={SignupScreen} />
   </AuthStack.Navigator>
@@ -32,31 +31,30 @@ const AuthNavigator = () => (
 
 const MainNavigator = () => (
   <AppStack.Navigator screenOptions={{ headerShown: false }}>
+    {/* Staff/Regular User Screens */}
     <AppStack.Screen name="Main" component={BottomTabNavigator} />
+    
+    {/* Admin Screens */}
+    <AppStack.Screen name="AdminDashboard" component={AdminStack} />
+    
+    {/* Manager Screens */}
+    <AppStack.Screen name="ManagerDashboard" component={ManagerDashboard} />
+    
+    {/* Shared Screens */}
     <AppStack.Screen name="AboutUs" component={AboutUsScreen} />
     <AppStack.Screen name="Settings" component={SettingsScreen} />
     <AppStack.Screen name="Profile" component={ProfileScreen} />
     <AppStack.Screen name="MenuCategoryScreen" component={MenuCategoryScreen} />
     <AppStack.Screen name="MenuItems" component={MenuItemsScreen} />
     <AppStack.Screen name="Cart" component={CartScreen} />
-<AppStack.Screen name="OrderDetail" component={OrderDetailScreen} />
-<AppStack.Screen name="OrderConfirmation" component={OrderConfirmation} />
-   
-<AppStack.Screen 
-  name="ItemDetail" 
-  component={ItemDetail} 
-  options={{ /* your options */ }} 
-  initialParams={{ onAddToCart: (item) => console.log(item) }} // Default function if not provided
-/>
-   
-    
-
-    <AppStack.Screen name="Admin" component={AdminStack} />
-
-   
+    <AppStack.Screen name="OrderDetail" component={OrderDetailScreen} />
+    <AppStack.Screen name="OrderConfirmation" component={OrderConfirmation} />
+    <AppStack.Screen 
+      name="ItemDetail" 
+      component={ItemDetail} 
+      initialParams={{ onAddToCart: (item) => console.log(item) }}
+    />
   </AppStack.Navigator>
-
-  
 );
 
 const AppNavigator = () => {
