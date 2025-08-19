@@ -98,106 +98,203 @@ const AdminDashboard = () => {
     };
   }, []);
 
-  const loadDashboardData = async () => {
+const loadDashboardData = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    // Get current user's data from STAFF collection (not users)
+    const user = auth.currentUser;
+    if (!user) {
+      console.log('No authenticated user');
+      navigation.navigate('Auth');
+      return;
+    }
+
+    console.log('Fetching admin data from staff collection for:', user.uid);
+    
+    // Look in staff collection for admin
+    const adminRef = doc(db, 'staff', user.uid);
+    const adminSnap = await getDoc(adminRef);
+    
+    if (!adminSnap.exists()) {
+      throw new Error("Admin document not found in staff collection");
+    }
+
+    const adminData = adminSnap.data();
+    console.log('Admin data:', adminData);
+    
+    const cafeId = adminData.cafeId;
+    console.log('Found cafeId:', cafeId);
+
+    if (!cafeId) {
+      throw new Error("Admin is not associated with a cafe");
+    }
+
+    // Verify user is admin
+    if (adminData.role !== 'admin') {
+      throw new Error("User does not have admin permissions");
+    }
+
+    // Get today's date range
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    
+    // Fetch all data with cafeId
+    const [
+      todaysSales,
+      activeShifts, 
+      totalStaff,
+      pendingOrders,
+      recentActivity,
+      lowStockItems,
+      monthlyRevenue
+    ] = await Promise.all([
+      getTodaysSales(startOfDay, endOfDay, cafeId),
+      getActiveShifts(cafeId),
+      getTotalStaff(cafeId), 
+      getPendingOrders(cafeId),
+      getRecentActivity(cafeId),
+      getLowStockCount(cafeId),
+      getMonthlyRevenue(cafeId)
+    ]);
+
+    setDashboardData({
+      todaysSales,
+      activeShifts,
+      totalStaff,
+      pendingOrders,
+      recentActivity,
+      lowStockItems,
+      monthlyRevenue,
+    });
+    
+  } catch (error) {
+    console.error('Error loading dashboard data:', error);
+    setError(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Update getTotalStaff to count from users collection (employees)
+const getTotalStaff = async (cafeId) => {
+  try {
+    const staffQuery = query(
+      collection(db, 'users'), // Employees are in users collection
+      where('cafeId', '==', cafeId),
+      where('employment.isActive', '==', true)
+    );
+    const snapshot = await getDocs(staffQuery);
+    return snapshot.size;
+  } catch (error) {
+    console.error('Error getting total staff:', error);
+    return 0;
+  }
+};
+
+// Update real-time listeners setup
+useEffect(() => {
+  const setupListeners = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
     try {
-      setLoading(true);
+      // Get admin data to find cafeId
+      const adminRef = doc(db, 'staff', user.uid);
+      const adminSnap = await getDoc(adminRef);
       
-      // Get today's date range
-      const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-      
-      // Parallel data fetching
-      const [
-        todaySalesData,
-        activeShiftsData,
-        staffData,
-        pendingOrdersData,
-        recentActivityData,
-      ] = await Promise.all([
-        getTodaysSales(startOfDay, endOfDay),
-        getActiveShifts(),
-        getTotalStaff(),
-        getPendingOrders(),
-        getRecentActivity(),
-      ]);
-
-      setDashboardData({
-        todaysSales: todaySalesData,
-        activeShifts: activeShiftsData,
-        totalStaff: staffData,
-        pendingOrders: pendingOrdersData,
-        recentActivity: recentActivityData,
-        lowStockItems: await getLowStockCount(),
-        monthlyRevenue: await getMonthlyRevenue(),
-      });
-      
+      if (adminSnap.exists()) {
+        const cafeId = adminSnap.data().cafeId;
+        if (cafeId) {
+          const unsubscribeOrders = setupOrdersListener(cafeId);
+          const unsubscribeShifts = setupShiftsListener(cafeId);
+          
+          return () => {
+            unsubscribeOrders && unsubscribeOrders();
+            unsubscribeShifts && unsubscribeShifts();
+          };
+        }
+      }
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
-      Alert.alert('Error', 'Failed to load dashboard data');
-    } finally {
-      setLoading(false);
+      console.error('Error setting up listeners:', error);
     }
   };
 
-  // Data fetching functions
-  const getTodaysSales = async (startOfDay, endOfDay) => {
-    try {
-      const ordersQuery = query(
-        collection(db, 'orders'),
-        where('createdAt', '>=', startOfDay),
-        where('createdAt', '<', endOfDay),
-        where('status', '==', 'completed')
-      );
-      const snapshot = await getDocs(ordersQuery);
-      return snapshot.docs.reduce((total, doc) => total + (doc.data().total || 0), 0);
-    } catch (error) {
-      console.error('Error getting today sales:', error);
-      return 0;
-    }
-  };
+  setupListeners();
+}, []);
 
-  const getActiveShifts = async () => {
-    try {
-      const shiftsQuery = query(
-        collection(db, 'shifts'),
-        where('status', '==', 'active')
-      );
-      const snapshot = await getDocs(shiftsQuery);
-      return snapshot.size;
-    } catch (error) {
-      console.error('Error getting active shifts:', error);
-      return 0;
-    }
-  };
+// Update all your data fetching functions to include cafeId
+const getTodaysSales = async (startOfDay, endOfDay, cafeId) => {
+  try {
+    const ordersQuery = query(
+      collection(db, 'orders'),
+      where('cafeId', '==', cafeId), // Add this filter
+      where('createdAt', '>=', startOfDay),
+      where('createdAt', '<', endOfDay),
+      where('status', '==', 'completed')
+    );
+    const snapshot = await getDocs(ordersQuery);
+    return snapshot.docs.reduce((total, doc) => total + (doc.data().total || 0), 0);
+  } catch (error) {
+    console.error('Error getting today sales:', error);
+    return 0;
+  }
+};
 
-  const getTotalStaff = async () => {
-    try {
-      const staffQuery = query(
-        collection(db, 'staff'),
-        where('active', '==', true)
-      );
-      const snapshot = await getDocs(staffQuery);
-      return snapshot.size;
-    } catch (error) {
-      console.error('Error getting total staff:', error);
-      return 0;
-    }
-  };
+const getActiveShifts = async (cafeId) => {
+  try {
+    const shiftsQuery = query(
+      collection(db, 'shifts'),
+      where('cafeId', '==', cafeId), // Add this filter
+      where('status', '==', 'active')
+    );
+    const snapshot = await getDocs(shiftsQuery);
+    return snapshot.size;
+  } catch (error) {
+    console.error('Error getting active shifts:', error);
+    return 0;
+  }
+};
 
-  const getPendingOrders = async () => {
-    try {
-      const ordersQuery = query(
-        collection(db, 'orders'),
-        where('status', 'in', ['pending', 'preparing'])
-      );
-      const snapshot = await getDocs(ordersQuery);
-      return snapshot.size;
-    } catch (error) {
-      console.error('Error getting pending orders:', error);
-      return 0;
-    }
-  };
+
+
+const getPendingOrders = async (cafeId) => {
+  try {
+    const ordersQuery = query(
+      collection(db, 'orders'),
+      where('cafeId', '==', cafeId), // Add this filter
+      where('status', 'in', ['pending', 'preparing'])
+    );
+    const snapshot = await getDocs(ordersQuery);
+    return snapshot.size;
+  } catch (error) {
+    console.error('Error getting pending orders:', error);
+    return 0;
+  }
+};
+
+// Update real-time listeners too
+const setupOrdersListener = (cafeId) => {
+  try {
+    const ordersQuery = query(
+      collection(db, 'orders'),
+      where('cafeId', '==', cafeId), // Add this filter
+      where('status', 'in', ['pending', 'preparing'])
+    );
+    
+    return onSnapshot(ordersQuery, (snapshot) => {
+      setRealtimeData(prev => ({
+        ...prev,
+        activeOrders: snapshot.size
+      }));
+    });
+  } catch (error) {
+    console.error('Error setting up orders listener:', error);
+    return null;
+  }
+};
 
   const getRecentActivity = async () => {
     try {
@@ -247,27 +344,6 @@ const AdminDashboard = () => {
       return 0;
     }
   };
-
-  // Real-time listeners
-  const setupOrdersListener = () => {
-    try {
-      const ordersQuery = query(
-        collection(db, 'orders'),
-        where('status', 'in', ['pending', 'preparing'])
-      );
-      
-      return onSnapshot(ordersQuery, (snapshot) => {
-        setRealtimeData(prev => ({
-          ...prev,
-          activeOrders: snapshot.size
-        }));
-      });
-    } catch (error) {
-      console.error('Error setting up orders listener:', error);
-      return null;
-    }
-  };
-
   const setupShiftsListener = () => {
     try {
       const shiftsQuery = query(

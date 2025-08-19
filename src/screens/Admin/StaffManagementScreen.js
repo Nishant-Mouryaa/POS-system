@@ -52,15 +52,19 @@ const StaffManagementScreen = () => {
   const [filterRole, setFilterRole] = useState('all');
   
   // Form states
-  const [newStaff, setNewStaff] = useState({
-    name: '',
+const [newStaff, setNewStaff] = useState({
+  personalInfo: {
+    firstName: '',
+    lastName: '',
     email: '',
-    password: '',
-    role: 'staff',
     phone: '',
-    salary: '',
-    active: true,
-  });
+  },
+  employment: {
+    role: 'cashier',
+    isActive: true,
+  },
+  password: ''
+});
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -124,58 +128,67 @@ const StaffManagementScreen = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const handleAddStaff = async () => {
-    if (!newStaff.name || !newStaff.email || !newStaff.password) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
-    }
+ const handleAddStaff = async () => {
+  if (!newStaff.personalInfo.firstName || !newStaff.personalInfo.email || !newStaff.password) {
+    Alert.alert('Error', 'Please fill in first name, email and password');
+    return;
+  }
 
-    try {
-      setLoading(true);
-      
-      // Create Firebase Auth user
-      const auth = getAuth();
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, 
-        newStaff.email, 
-        newStaff.password
-      );
+  try {
+    setLoading(true);
+    
+    // Create Firebase Auth user
+    const auth = getAuth();
+    const userCredential = await createUserWithEmailAndPassword(
+      auth, 
+      newStaff.personalInfo.email, 
+      newStaff.password
+    );
 
-      // Add staff document
-      await addDoc(collection(db, 'staff'), {
-        uid: userCredential.user.uid,
-        name: newStaff.name,
-        email: newStaff.email,
-        role: newStaff.role,
-        phone: newStaff.phone,
-        salary: parseFloat(newStaff.salary) || 0,
-        active: newStaff.active,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+    // Add staff document with your structure
+    await addDoc(collection(db, 'staff'), {
+      cafeId: "cafe_001", // or get from your app context
+      personalInfo: {
+        firstName: newStaff.personalInfo.firstName,
+        lastName: newStaff.personalInfo.lastName,
+        email: newStaff.personalInfo.email,
+        phone: newStaff.personalInfo.phone,
+      },
+      employment: {
+        role: newStaff.employment.role,
+        isActive: newStaff.employment.isActive,
+      },
+      createdAt: new Date(),
+      uid: userCredential.user.uid,
+    });
 
-      // Reset form and close modal
-      setNewStaff({
-        name: '',
+    // Reset form
+    setNewStaff({
+      personalInfo: {
+        firstName: '',
+        lastName: '',
         email: '',
-        password: '',
-        role: 'staff',
         phone: '',
-        salary: '',
-        active: true,
-      });
-      setShowAddModal(false);
-      await loadStaff();
-      
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'Staff member added successfully');
-    } catch (error) {
-      console.error('Error adding staff:', error);
-      Alert.alert('Error', error.message || 'Failed to add staff member');
-    } finally {
-      setLoading(false);
-    }
-  };
+      },
+      employment: {
+        role: 'cashier',
+        isActive: true,
+      },
+      password: ''
+    });
+    
+    setShowAddModal(false);
+    await loadStaff();
+    
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert('Success', 'Staff member added successfully');
+  } catch (error) {
+    console.error('Error adding staff:', error);
+    Alert.alert('Error', error.message || 'Failed to add staff member');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleUpdateStaff = async () => {
     if (!selectedStaff) return;

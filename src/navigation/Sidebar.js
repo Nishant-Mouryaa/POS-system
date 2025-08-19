@@ -11,7 +11,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAuth, signOut } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
-import AdminPanel from '../screens/Admin/AdminPanel';
+
 
 
 const { width } = Dimensions.get('window');
