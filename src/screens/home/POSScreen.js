@@ -14,7 +14,6 @@ import { getAuth } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { Palette } from '../../theme/colors';
-// Your local components:
 import Sidebar from '../../navigation/Sidebar';
 import POSMenuButton from '../../components/pos/POSMenuButton';
 import POSUserHeader from '../../components/pos/POSUserHeader';
@@ -22,7 +21,6 @@ import POSStatsCard from '../../components/pos/POSStatsCard';
 import POSQuickActions from '../../components/pos/POSQuickActions';
 import RecentOrders from '../../components/pos/RecentOrders';
 import ManagerTools from '../../components/pos/ManagerTools';
-
 const { width } = Dimensions.get('window');
 
 const POSScreen = ({ navigation, route }) => {
@@ -75,7 +73,6 @@ const POSScreen = ({ navigation, route }) => {
     }
 
     console.log('Fetching stats for cafe:', cafeId);
-
     try {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -116,7 +113,6 @@ const POSScreen = ({ navigation, route }) => {
       if (stats.totalOrders > 0) {
         stats.averageOrderValue = stats.totalSales / stats.totalOrders;
       }
-
       console.log('Stats calculated:', stats);
       return stats;
     } catch (error) {

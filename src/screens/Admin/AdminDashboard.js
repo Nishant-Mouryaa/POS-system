@@ -230,7 +230,7 @@ const getTodaysSales = async (startOfDay, endOfDay, cafeId) => {
   try {
     const ordersQuery = query(
       collection(db, 'orders'),
-      where('cafeId', '==', cafeId), // Add this filter
+      where('cafeId', '==', cafeId), 
       where('createdAt', '>=', startOfDay),
       where('createdAt', '<', endOfDay),
       where('status', '==', 'completed')
